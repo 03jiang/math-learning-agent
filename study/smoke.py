@@ -12,6 +12,7 @@ from study.diagnosis import validate_analysis
 from study.notebook import Notebook, make_entry
 from study.run_audit import AuditError, RunAudit, digest, read_json, write_json, stamp
 from study.service import (StudyService, PhotoTransport, ANALYSIS_PROMPT, CORRECTION_PROMPT,
+                           ANALYSIS_PROMPT_VERSION, CORRECTION_PROMPT_VERSION,
                            analysis_context, correction_context, build_payload)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,7 +76,7 @@ def create_run(output, *, mode='real_api', config=None):
         raise AuditError('文字验证使用 DeepSeek Chat Completions 配置。')
     audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-text-smoke-v1',
         'execution_mode': mode, 'code': source_snapshot(), 'config': asdict(config),
-        'prompt_versions': {'analyze': 'photo-study-v3', 'reanalyze': 'photo-correction-v2'},
+        'prompt_versions': {'analyze': ANALYSIS_PROMPT_VERSION, 'reanalyze': CORRECTION_PROMPT_VERSION},
         'rows': make_rows(config), 'planned_requests': 7, 'real_requests_on_preview': 0,
         'cost_estimate_cny': None, 'human_scoring': '未评分'})
     write_json(audit.directory / 'review.json', {'label': '人工检查表；空白为未评，不是 0 分',

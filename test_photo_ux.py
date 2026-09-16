@@ -122,7 +122,7 @@ class TwoPhotoHTTPTests(unittest.TestCase):
             server.body=fixtures.chat_envelope(json.dumps(ANALYSIS))
             service.analyze(QUESTION,'初中',STUDENT_WORK,self.question,work_kind='steps',work_image=crop)
             self.assertEqual(2,len(server.requests))
-            self.assertEqual('photo-study-v3',service.calls[-1]['contract'])
+            self.assertEqual('photo-study-v4',service.calls[-1]['contract'])
 
     def test_work_only_requires_typed_question_and_never_fabricates_question(self):
         with LocalModelServer() as server:

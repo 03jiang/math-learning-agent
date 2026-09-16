@@ -56,6 +56,31 @@ class DiagnosisTests(unittest.TestCase):
         bad['student_review']['comparisons'][0]['verdict']='correct'
         with self.assertRaises(ValueError): validate_analysis(bad,student_work=STUDENT_WORK)
 
+    def test_answer_only_rejects_empty_diagnosis_inside_student_review(self):
+        # 手写最小复现：合法 JSON 仍不允许未知嵌套字段；不会自动删字段修复。
+        result=fixtures.new_solution('answer_only')
+        for move_from_top in (False, True):
+            bad=deepcopy(result)
+            bad['student_review']['diagnosis']=bad.pop('diagnosis') if move_from_top else []
+            original=deepcopy(bad)
+            with self.subTest(move_from_top=move_from_top):
+                with self.assertRaises(ValueError):
+                    validate_analysis(bad,student_work='x = 4',work_kind='answer_only')
+                self.assertEqual(original,bad)
+        validate_analysis(result,student_work='x = 4',work_kind='answer_only')
+
+    def test_correct_reduction_after_wrong_addition_is_not_error_evidence(self):
+        # 手写测试数据验证“整体错误、局部正确”可表达；不证明模型会如此判断。
+        result=json.loads((fixtures.ROOT/'evaluation/study_smoke_local_responses.json').read_text())['responses']['b02']
+        work='2/3 + 1/6 = 3/9\n3/9 = 1/3'
+        validate_analysis(result,student_work=work,work_kind='steps')
+        self.assertEqual('incorrect',result['student_review']['verdict'])
+        self.assertEqual(['incorrect','correct'],[row['verdict'] for row in result['student_review']['comparisons']])
+        bad=deepcopy(result)
+        bad['diagnosis'][0]['evidence']='3/9 = 1/3'
+        with self.assertRaisesRegex(ValueError,'错因未对应'):
+            validate_analysis(bad,student_work=work,work_kind='steps')
+
     def test_equivalent_correct_method_can_be_accepted_without_error_label(self):
         result=deepcopy(ANALYSIS)
         result['student_review'].update(verdict='correct',observed_approach='用逆运算一次列出表达式。',
@@ -139,7 +164,7 @@ class DiagnosticHTTPTests(unittest.TestCase):
             self.assertEqual(STUDENT_WORK,context['student_work'])
             self.assertEqual('steps',context['student_work_kind'])
             self.assertEqual(2,len(server.requests))
-            self.assertEqual('photo-study-v3',tutor.calls[1]['contract'])
+            self.assertEqual('photo-study-v4',tutor.calls[1]['contract'])
 
     def test_bad_evidence_or_wrong_kind_fails_once_without_retry(self):
         with LocalModelServer() as server:

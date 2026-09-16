@@ -166,6 +166,34 @@ class StudySmokeTests(unittest.TestCase):
         self.assertEqual('http_401', audit.row('b01')['call']['error_code'])
         self.assertEqual(1, len(server.requests))
 
+    def test_nested_diagnosis_stops_third_response_without_save_or_retry(self):
+        # 重现真实失败的字段形状；内容来自既有手写 fixture，不公开原始响应。
+        audit = self.create(); server = self.server(audit); valid = server.body
+        def invalid_third(payload):
+            reply = valid(payload)
+            context = json.loads(payload['messages'][1]['content'][0]['text'])
+            if context['student_work_kind'] == 'answer_only':
+                result = json.loads(reply['choices'][0]['message']['content'])
+                result['student_review']['diagnosis'] = []
+                reply['choices'][0]['message']['content'] = json.dumps(result, ensure_ascii=False)
+            return reply
+        server.body = invalid_third
+        result = execute(audit, server=server)
+        self.assertEqual({'pending':4,'reply_valid':2,'failed':1,'running':0,'blocked':0},result['counts'])
+        self.assertEqual(3,len(server.requests))
+        self.assertEqual(200,audit.row('b03')['call']['http_status'])
+        self.assertEqual('invalid_content',audit.row('b03')['call']['error_code'])
+        raw = json.loads(audit.row('b03')['diagnostic_content'])
+        self.assertIn('diagnosis',raw['student_review'])
+        self.assertIn('diagnosis',raw)
+        self.assertIsNone(audit.row('b03')['result'])
+        before = audit.path('b03').read_bytes()
+        with self.assertRaises(ValueError): decide(audit,'b03','accept')
+        with self.assertRaises(ValueError): execute(RunAudit(audit.directory),server=server)
+        self.assertEqual(before,audit.path('b03').read_bytes())
+        self.assertEqual(3,len(server.requests))
+        self.assertFalse(notebook(audit).directory.exists())
+
     def test_credential_echo_and_reasoning_never_persist(self):
         audit = self.create(); server = self.server(audit)
         fixture = server.body
