@@ -4,12 +4,12 @@ import json
 import re
 
 from model_api import ModelAPIError
-from study.diagnosis import WORK_KINDS, VERDICTS
+from study.diagnosis import WORK_KINDS, VERDICTS, validate_analysis
 from study.notebook import REASONS
 
 OUTPUT_MODES = ('json_object', 'strict_tool')
 STRICT_ENDPOINT = 'https://api.deepseek.com/beta/chat/completions'
-CONTRACT_VERSION = 'study-strict-output-v1'
+CONTRACT_VERSION = 'study-strict-output-v2'
 FUNCTIONS = {'analyze': 'return_math_analysis', 'reanalyze': 'return_math_correction',
              'recognize': 'return_math_transcription'}
 ISSUES = {
@@ -75,8 +75,30 @@ def array(items):
     return {'type': 'array', 'items': items}
 
 
-def output_schema(operation):
-    # Beta 仅使用官方列出的基础类型与 enum。长度、引用和语义仍由应用检查。
+def change_schema(statuses, previous_excerpts=None):
+    return obj({'previous_excerpt': string(previous_excerpts), 'current_excerpt': string(),
+                'status': string(statuses), 'explanation': string()})
+
+
+def correction_change_schema(context):
+    """已订正/仍错误只可引用旧分析明确判错的整条引用；其他变化不作纠错声明。"""
+    before = context.get('previous_analysis') or {}
+    if before:
+        validate_analysis(before, student_work=context['previous_student_work'], allow_legacy=True)
+    comparable = (before.get('schema_version') == 2 and before['status'] == 'solved'
+                  and before['student_review']['work_kind'] == 'steps'
+                  and context['student_work_kind'] == 'steps')
+    wrong = list(dict.fromkeys(row['student_excerpt'] for row in before['student_review']['comparisons']
+                              if row['verdict'] == 'incorrect')) if comparable else []
+    neutral = change_schema(('changed', 'uncertain'))
+    # 不生成空 enum，也不从最终答案不符推断每个旧步骤均错误。
+    if not wrong:
+        return neutral
+    return {'anyOf': [change_schema(('corrected', 'still_incorrect'), wrong), neutral]}
+
+
+def output_schema(operation, *, context=None):
+    # Beta 使用官方列出的基础类型、enum 与 anyOf。新步骤语义仍由应用检查。
     if operation == 'recognize':
         return obj({'text': string(), 'student_work': string(),
                     'work_kind': string(WORK_KINDS), 'warnings': array(string())})
@@ -100,17 +122,17 @@ def output_schema(operation):
     if operation == 'analyze':
         return analysis
     if operation == 'reanalyze':
+        changes = (correction_change_schema(context) if context is not None else
+                   change_schema(('corrected', 'still_incorrect', 'changed', 'uncertain')))
         return obj({'schema_version': {'type': 'integer', 'enum': [1]}, 'analysis': analysis,
-            'comparison': obj({'summary': string(), 'changes': array(obj({
-                'previous_excerpt': string(), 'current_excerpt': string(),
-                'status': string(('corrected', 'still_incorrect', 'changed', 'uncertain')),
-                'explanation': string(),
-            }))})})
+            'comparison': obj({'summary': string(), 'changes': array(changes)})})
     raise ValueError('未知结构化输出操作。')
 
 
-def strict_payload(payload, operation):
-    schema = output_schema(operation)
+def strict_payload(payload, operation, *, context=None):
+    if operation == 'reanalyze' and context is None:
+        raise ValueError('严格订正格式必须提供已核对的前后作答上下文。')
+    schema = output_schema(operation, context=context)
     name = FUNCTIONS[operation]
     result = deepcopy(payload)
     result.pop('response_format', None)

@@ -8,15 +8,17 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, ValidationError as SchemaError
 from http_test_support import LocalModelServer
 from http_worker import endpoint_kind
 from model_api import ModelAPIError, chat_response_text
 from study.output_contract import (OutputParseError, parse_output, endpoint, output_schema,
     strict_response_text, STRICT_ENDPOINT, FUNCTIONS)
-from study.service import StudyService, PhotoTransport, build_payload, ANALYSIS_PROMPT, analysis_context
+from study.service import (StudyService, PhotoTransport, build_payload, ANALYSIS_PROMPT,
+                           CORRECTION_PROMPT, analysis_context)
+from study.corrections import validate_result, CorrectionValidationError
 from study.run_audit import RunAudit, read_json
-from study.smoke import create_run, default_config, execute, decide, notebook, verify_frozen
+from study.smoke import create_run, default_config, execute, decide, notebook, verify_frozen, make_rows
 from tools.verify_study_live import local_fixture, run_local, main
 
 ROOT = Path(__file__).resolve().parent
@@ -29,6 +31,13 @@ def envelope(arguments='{}', operation='analyze'):
             'tool_calls': [{'id': 'fixture-call', 'type': 'function', 'function': {
                 'name': FUNCTIONS[operation], 'arguments': arguments}}]}}],
         'usage': {'prompt_tokens': 10, 'completion_tokens': 20, 'total_tokens': 30}}
+
+
+def correction_fixture_context(parent='b02', current='b06'):
+    rows = {row['row_id']: row for row in make_rows(default_config())}
+    fixtures = read_json(ROOT/'evaluation/study_smoke_local_responses.json')['responses']
+    return {**rows[current]['context'], 'previous_student_work': rows[parent]['context']['student_work'],
+            'previous_analysis': fixtures[parent]}, fixtures[current]
 
 
 class OutputContractTests(unittest.TestCase):
@@ -60,13 +69,18 @@ class OutputContractTests(unittest.TestCase):
         Draft202012Validator(output_schema('recognize')).validate(
             {'text': '计算 1+1', 'student_work': '', 'work_kind': 'none', 'warnings': []})
         def check(schema):
-            self.assertFalse(set(schema) - {'type','properties','required','additionalProperties','enum','items'})
+            self.assertFalse(set(schema) - {'type','properties','required','additionalProperties','enum','items','anyOf'})
+            if 'anyOf' in schema:
+                for branch in schema['anyOf']: check(branch)
+                return
             if schema['type'] == 'object':
                 self.assertEqual(set(schema['properties']), set(schema['required']))
                 self.assertIs(False, schema['additionalProperties'])
                 for child in schema['properties'].values(): check(child)
             if schema['type'] == 'array': check(schema['items'])
         for op in FUNCTIONS: check(output_schema(op))
+        context, _ = correction_fixture_context()
+        check(output_schema('reanalyze', context=context))
 
     def test_payload_explicitly_forces_one_result_and_keeps_legacy_default(self):
         context = analysis_context('计算 1+1', '小学')
@@ -255,6 +269,118 @@ class StrictHTTPTests(unittest.TestCase):
              patch.object(ui.st, 'session_state', {}), patch.object(ui, 'StudyService') as service:
             ui.service()
             self.assertEqual('strict_tool', service.call_args.kwargs['output_mode'])
+
+
+class CorrectionEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.context, self.result = correction_fixture_context()
+        self.schema = output_schema('reanalyze', context=self.context)
+
+    def validate(self, value):
+        return validate_result(value, previous_work=self.context['previous_student_work'],
+            previous_analysis=self.context['previous_analysis'], answer=self.context['student_work'], work_kind='steps')
+
+    def wrong_progress_claim(self):
+        result = deepcopy(self.result)
+        result['comparison']['changes'].append({'previous_excerpt': '3/9 = 1/3',
+            'current_excerpt': '2/3 + 1/6 = 4/6 + 1/6 = 5/6', 'status': 'corrected',
+            'explanation': '手写错误示例：把原本正确的约分说成需要订正。'})
+        return result
+
+    def test_provider_schema_rejects_correct_old_step_for_both_error_claims(self):
+        for status in ('corrected','still_incorrect'):
+            value = self.wrong_progress_claim(); value['comparison']['changes'][-1]['status'] = status
+            before = deepcopy(value)
+            with self.subTest(status=status):
+                with self.assertRaises(SchemaError): Draft202012Validator(self.schema).validate(value)
+                with self.assertRaises(CorrectionValidationError) as caught: self.validate(value)
+                self.assertEqual('correction_previous_not_incorrect', caught.exception.code)
+                self.assertNotIn('3/9', str(caught.exception))
+                self.assertEqual(before, value)
+
+    def test_corrected_wrong_step_and_neutral_change_remain_valid(self):
+        for status in ('changed','uncertain'):
+            value = self.wrong_progress_claim(); value['comparison']['changes'][-1]['status'] = status
+            value['comparison']['changes'][-1]['explanation'] = '旧约分本身正确，本次改用通分相加；这项只描述表达变化。'
+            Draft202012Validator(self.schema).validate(value)
+            self.assertEqual(value, self.validate(value))
+        Draft202012Validator(self.schema).validate(self.result)
+        self.assertEqual(self.result, self.validate(self.result))
+
+    def test_current_step_evidence_is_still_checked_independently(self):
+        value = deepcopy(self.result)
+        value['analysis']['student_review']['verdict'] = 'uncertain'
+        value['analysis']['student_review']['comparisons'][1]['verdict'] = 'uncertain'
+        # Provider schema can limit old excerpts, but cannot prove new mathematics or labels.
+        Draft202012Validator(self.schema).validate(value)
+        with self.assertRaises(CorrectionValidationError) as caught: self.validate(value)
+        self.assertEqual('correction_current_verdict_mismatch', caught.exception.code)
+
+    def test_no_previous_wrong_steps_has_no_corrected_branch_or_empty_enum(self):
+        context, value = correction_fixture_context('b04','b07')
+        schema = output_schema('reanalyze', context=context)
+        Draft202012Validator.check_schema(schema)
+        Draft202012Validator(schema).validate(value)
+        item = schema['properties']['comparison']['properties']['changes']['items']
+        self.assertNotIn('anyOf', item)
+        self.assertEqual(['changed','uncertain'], item['properties']['status']['enum'])
+        self.assertNotIn('enum', item['properties']['previous_excerpt'])
+
+    def test_unavailable_or_uncertain_previous_evidence_does_not_enable_claims(self):
+        before = deepcopy(self.context['previous_analysis'])
+        before['student_review']['verdict'] = 'uncertain'
+        before['student_review']['comparisons'][0]['verdict'] = 'uncertain'
+        before['diagnosis'] = []
+        for previous in (None, before):
+            context = {**self.context, 'previous_analysis': previous}
+            schema = output_schema('reanalyze', context=context)
+            with self.subTest(previous=previous is None), self.assertRaises(SchemaError):
+                Draft202012Validator(schema).validate(self.result)
+
+    def test_wrong_excerpt_enum_comes_from_actual_baseline_without_mutation(self):
+        before = deepcopy(self.context)
+        payload = build_payload(default_config(), CORRECTION_PROMPT, self.context,
+                                output_mode='strict_tool', operation='reanalyze')
+        schema = payload['tools'][0]['function']['parameters']
+        evidence = schema['properties']['comparison']['properties']['changes']['items']['anyOf'][0]
+        self.assertEqual(['2/3 + 1/6 = 3/9'], evidence['properties']['previous_excerpt']['enum'])
+        self.assertEqual(before, self.context)
+        with self.assertRaises(SchemaError):
+            changed = deepcopy(self.result); changed['comparison']['changes'][0]['previous_excerpt'] = '3/9'
+            Draft202012Validator(schema).validate(changed)
+
+    def test_legacy_or_answer_only_context_cannot_claim_specific_correction(self):
+        legacy = {'status':'solved','topic':'分数','summary':'统一单位后相加。','steps':['先通分。'],
+                  'answer':'5/6','error_analysis':'旧格式没有逐步证据。','next_practice':'写出通分过程。','clarification':''}
+        contexts = [{**self.context, 'previous_analysis': legacy},
+                    {**self.context, 'student_work_kind':'answer_only','student_work':'5/6'}]
+        for context in contexts:
+            with self.subTest(kind=context['student_work_kind']), self.assertRaises(SchemaError):
+                Draft202012Validator(output_schema('reanalyze', context=context)).validate(self.result)
+
+    def test_failed_correction_is_audited_and_preserves_saved_parent_without_retry(self):
+        with tempfile.TemporaryDirectory() as directory, LocalModelServer() as server:
+            audit = create_run(Path(directory)/'run', mode='local_http_test',
+                               row_ids=['b02','b06'], output_mode='strict_tool')
+            server.body = local_fixture(audit)
+            self.assertEqual(1, execute(audit,server=server)['counts']['reply_valid'])
+            decision = decide(audit,'b02','accept',actor='local_fixture')
+            path = notebook(audit).path(decision['entry_id']); before = path.read_bytes()
+            bad = self.wrong_progress_claim()
+            server.body = envelope(json.dumps(bad,ensure_ascii=False),'reanalyze')
+            status = execute(audit,server=server)
+            self.assertEqual([{'row_id':'b06','error_code':'invalid_content',
+                'validation_issue':'correction_previous_not_incorrect'}], status['failures'])
+            self.assertEqual(bad,json.loads(audit.row('b06')['diagnostic_content']))
+            self.assertIsNone(audit.row('b06')['result'])
+            self.assertEqual(before,path.read_bytes())
+            self.assertEqual([],notebook(RunAudit(audit.directory)).get(decision['entry_id']).get('corrections',[]))
+            with self.assertRaises(ValueError): decide(audit,'b06','accept')
+            with self.assertRaises(ValueError): execute(RunAudit(audit.directory),server=server)
+            self.assertEqual(2,len(server.requests)); self.assertEqual(before,path.read_bytes())
+            request = server.requests[-1]['payload']
+            with self.assertRaises(SchemaError):
+                Draft202012Validator(request['tools'][0]['function']['parameters']).validate(bad)
 
 
 if __name__ == '__main__': unittest.main(verbosity=2)

@@ -8,6 +8,19 @@ from study.notebook import text
 CHANGE_LABELS = {'corrected':'这处已订正（模型判断）', 'still_incorrect':'这处仍需订正',
                  'changed':'表达有变化', 'uncertain':'变化还需核对'}
 
+CORRECTION_ISSUES = {
+    'correction_steps_unavailable': '前后缺少可核对的步骤分析，不能断言具体步骤已订正。',
+    'correction_previous_not_incorrect': '订正声明引用的旧步骤未被旧分析判为错误；不能把原本正确或不确定的步骤标为已订正。',
+    'correction_current_verdict_mismatch': '订正声明与本次所引用步骤的判断不一致。',
+}
+
+
+class CorrectionValidationError(ValueError):
+    """固定错误码；不把学生原文或服务端正文拼进异常。"""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(CORRECTION_ISSUES[code])
+
 
 def baseline(entry):
     previous=entry.get('corrections',[])
@@ -47,7 +60,7 @@ def validate_result(value,*,previous_work,previous_analysis,answer,work_kind):
                 and before['student_review']['work_kind']=='steps' and current['status']=='solved'
                 and work_kind=='steps')
     if changes and not comparable:
-        raise ValueError('前后缺少可核对的步骤分析，不能断言具体步骤已订正。')
+        raise CorrectionValidationError('correction_steps_unavailable')
     for row in changes:
         object_fields(row,{'previous_excerpt','current_excerpt','status','explanation'})
         quoted(row['previous_excerpt'],previous_work)
@@ -57,7 +70,8 @@ def validate_result(value,*,previous_work,previous_analysis,answer,work_kind):
         text(row['explanation'],'订正变化依据',1500,True)
         if row['status'] in ('corrected','still_incorrect'):
             expected='correct' if row['status']=='corrected' else 'incorrect'
-            if (not excerpt_has_verdict(before,row['previous_excerpt'],'incorrect')
-                    or not excerpt_has_verdict(current,row['current_excerpt'],expected)):
-                raise ValueError('订正结论与前后步骤证据不一致。')
+            if not excerpt_has_verdict(before,row['previous_excerpt'],'incorrect'):
+                raise CorrectionValidationError('correction_previous_not_incorrect')
+            if not excerpt_has_verdict(current,row['current_excerpt'],expected):
+                raise CorrectionValidationError('correction_current_verdict_mismatch')
     return value
