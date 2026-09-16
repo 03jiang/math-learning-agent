@@ -10,7 +10,7 @@
 
 真实识图应先使用自写题小范围验证，再检查学生原文归属、数学内容和诊断依据。字段校验成功不能替代教师评分。
 
-可选 `MATH_STUDY_OUTPUT_MODE=strict_tool python -m study.launch` 使用官方 Beta 地址和严格函数参数格式；默认 `json_object`。设置错误或 Beta 不支持时会停止，不回退后重新收费。它只返回待核对结果，不执行函数、不自动保存。此通道目前只有本机 HTTP 验证，真实文字及图片兼容性尚未验证；先按[文字验证说明](docs/STUDY_SMOKE.md)生成仅 b01 的预览并确认次数与预算，再考虑启用页面。
+可选 `MATH_STUDY_OUTPUT_MODE=strict_tool python -m study.launch` 使用官方 Beta 地址和严格函数参数格式；默认 `json_object`。设置错误或 Beta 不支持时会停止，不回退后重新收费。它只返回待核对结果，不执行函数、不自动保存。此通道已通过 b01 单条真实文字分析，图片和订正的真实兼容性仍未验收。先阅读[文字验证记录](docs/STUDY_SMOKE.md)，任何新增付费验证都需单独冻结范围、确认次数与预算，不能重复运行已经用完名额的计划。
 
 ## 原四题模块的评估
 
