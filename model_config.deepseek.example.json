@@ -1,0 +1,11 @@
+{
+  "mode": "api",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "timeout_seconds": 45,
+  "max_output_tokens": 2000,
+  "api_format": "chat_completions",
+  "base_url": "https://api.deepseek.com",
+  "temperature": 0.2,
+  "thinking": "disabled"
+}

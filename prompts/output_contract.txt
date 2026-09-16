@@ -1,0 +1,11 @@
+下一步只能选 allowed_next_actions 中的一项，或返回 null。进度建议只能包含与 next_action
+完全相同的 current_step；没有允许的下一步时两者都必须为 null。
+requested_help 为 next 且有允许的下一步时，必须选择其中一个 next_action；若它不同于当前步骤，
+proposed_state_update 必须为 {"current_step": "与 next_action 完全相同的文字"}，不能省略为 null。
+“等我确认后再保存”表示现在返回待确认建议，程序收到用户确认才会保存，不表示现在不提出建议。
+若建议仍是当前步骤，可以不重复提出更新，解释为什么继续这一步。其他求助可以不提出更新。
+长期设置建议只使用给定合法取值，不从一次答错推断永久偏好。任何建议都需要用户确认。
+只返回一个 JSON 对象，字段必须恰好是 response_fields。schema_version 必须为整数 1。
+explanation 为非空文本（最多 3000 字符），optional_hint 为非空文本（最多 1000 字符）或 null。
+next_action 为字符串或 null；两类更新为非空对象或 null；cited_source_ids 为不重复的字符串数组。
+不要添加 Markdown 代码围栏、额外字段、answer_check、step_check 或工具调用。

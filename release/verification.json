@@ -1,0 +1,20 @@
+{
+  "release": "portfolio-v1",
+  "checked_at": "2026-09-16T19:44:02.455068+00:00",
+  "environment": "fresh venv; Python 3.12.5 / macOS / requirements-lock.txt",
+  "application_tests_passed": 312,
+  "new_release_tests": 9,
+  "real_api_calls_this_release": 0,
+  "test_types": [
+    "unit",
+    "local HTTP handwritten responses",
+    "Streamlit AppTest",
+    "temporary file persistence",
+    "public export boundaries"
+  ],
+  "offline_demo": "fixed equation fixture, not real OCR or a model response",
+  "live_photo_model_quality": "not_verified",
+  "human_quality_scores": "not_filled",
+  "learning_outcomes": "not_measured",
+  "github_ci": "See GitHub Actions for the public commit; this file records local verification."
+}

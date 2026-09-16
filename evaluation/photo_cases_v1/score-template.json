@@ -1,0 +1,142 @@
+{
+  "status": "unscored",
+  "evidence_kind": "synthetic_images_not_real_photos",
+  "rubric": {
+    "0": "不符合",
+    "1": "部分符合",
+    "2": "符合",
+    "null": "未检查，不作为 0 分"
+  },
+  "rows": [
+    {
+      "case_id": "p01_fraction_steps",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "p02_answer_only",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "p03_word_reference",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "m04_equation_wrong",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "m05_equivalent_method",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "m06_geometry_missing",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "m07_geometry_right",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "h08_missing_root",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "h09_inequality_sign",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "q10_teacher_annotation",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "q11_obscured_digit",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "q12_rotated_image",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    },
+    {
+      "case_id": "q13_blurred_work",
+      "reply_file": null,
+      "ocr": null,
+      "separation": null,
+      "math": null,
+      "evidence_boundary": null,
+      "next_step": null,
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+data/
+.state-*.tmp
+.venv/
+.env
+.env.*
+.streamlit/secrets.toml
+model_config.json
+
+# 可重建的批量请求/回复与人工评分，单独保存在本机
+evaluation_runs/
+.eval-*
+
+# Local runtime and publishing artifacts
+.DS_Store
+*.log
+dist/
+.release-*

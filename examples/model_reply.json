@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "explanation": "先把同样大小的整体平均分成四份。想一想：一半能对应其中几份？再用同样大小的份数表示两个分数。",
+  "next_action": "把 1/2 改写为以 1/4 为单位的分数",
+  "optional_hint": "可以在纸带上标出一半，再把每一半平均分成两份。",
+  "proposed_state_update": {
+    "current_step": "把 1/2 改写为以 1/4 为单位的分数"
+  },
+  "proposed_configuration_update": null,
+  "cited_source_ids": ["M-F03"]
+}

@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "synthetic_images_not_real_photos",
+  "real_api_calls": 0,
+  "font_name": "STHeiti Light.ttc",
+  "cases": [
+    {
+      "id": "p01_fraction_steps",
+      "level": "小学",
+      "tags": [
+        "分数",
+        "错误过程"
+      ],
+      "question": "计算 1/2 + 1/4，并写出过程。",
+      "student_work": "1/2 + 1/4 = (1 + 1)/(2 + 4) = 2/6",
+      "work_kind": "steps",
+      "answer": "3/4",
+      "status": "solved",
+      "checks": [
+        "保留学生将分子、分母分别相加的原文。",
+        "说明先通分到相同分母。",
+        "错因假设必须引用原步骤，不贴能力标签。"
+      ],
+      "image": "images/p01_fraction_steps.png",
+      "sha256": "b3521e6409bf00d5b38b80c7b0cea018c582b1e21c43e6f585e48199251aab45",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "p02_answer_only",
+      "level": "小学",
+      "tags": [
+        "分数",
+        "只有错答案"
+      ],
+      "question": "计算 1/2 + 1/4。",
+      "student_work": "2/6",
+      "work_kind": "answer_only",
+      "answer": "3/4",
+      "status": "solved",
+      "checks": [
+        "区分题目和最终答案。",
+        "不得由 2/6 推断学生把分母相加。",
+        "要求补充列式，步骤对照和具体错因为空。"
+      ],
+      "image": "images/p02_answer_only.png",
+      "sha256": "e25ff1013db2679b5ea711279df082aa04cc896bd741668e940e3cb0178f150b",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "p03_word_reference",
+      "level": "小学",
+      "tags": [
+        "应用题",
+        "参照整体"
+      ],
+      "question": "一根绳子长 12 米，第一次用去全长的 1/3，\n第二次用去剩下部分的 1/4。还剩多少米？",
+      "student_work": "第一次用去 12 × 1/3 = 4 米\n第二次用去 12 × 1/4 = 3 米\n还剩 12 - 4 - 3 = 5 米",
+      "work_kind": "steps",
+      "answer": "6 米",
+      "status": "solved",
+      "checks": [
+        "识别“剩下部分”而非“全长”。",
+        "第二次用去 (12 - 4) × 1/4 = 2 米。",
+        "指出第二次列式的参照整体问题，认可第一次计算。"
+      ],
+      "image": "images/p03_word_reference.png",
+      "sha256": "c045ff0edee5e54531ac1a85b3e2caa65d7bed353e1bc9345f2895360aeb3e36",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "m04_equation_wrong",
+      "level": "初中",
+      "tags": [
+        "方程",
+        "符号错误",
+        "订正基线"
+      ],
+      "question": "解方程：2x + 3 = 11，并检验。",
+      "student_work": "2x = 11 + 3\n2x = 14\nx = 7",
+      "work_kind": "steps",
+      "answer": "x = 4",
+      "status": "solved",
+      "checks": [
+        "第一处问题在两边运算不一致。",
+        "后续加法、除法本身无新计算错误。",
+        "不能仅凭一题排除符号笔误的可能。"
+      ],
+      "image": "images/m04_equation_wrong.png",
+      "sha256": "156098e4dcedcacca025b3bcdccf313958d05ff64a37da168131a9b86c932e37",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "m05_equivalent_method",
+      "level": "初中",
+      "tags": [
+        "方程",
+        "等价正确解法"
+      ],
+      "question": "解方程：2x + 3 = 11。",
+      "student_work": "x = (11 - 3)/2 = 4",
+      "work_kind": "steps",
+      "answer": "x = 4",
+      "status": "solved",
+      "checks": [
+        "认可合并列式的正确解法。",
+        "不得因学生步骤比参考少而判错。",
+        "可以建议检验，不应归为概念错误。"
+      ],
+      "image": "images/m05_equivalent_method.png",
+      "sha256": "e1b46cb2c518367481ef531e0824912b392754dd430b1b3e89ec7ba97d8a5141",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "m06_geometry_missing",
+      "level": "初中",
+      "tags": [
+        "几何图形",
+        "缺少条件"
+      ],
+      "question": "如图，三角形 ABC 的底边 BC 长 6 cm，求面积。\n示意图不按比例绘制，不能从图片量取长度。",
+      "student_work": "",
+      "work_kind": "none",
+      "answer": null,
+      "status": "needs_clarification",
+      "checks": [
+        "需要询问对应高或足以确定面积的其他条件。",
+        "不得从像素、图形外观或猜测补出高。",
+        "不得给出确定面积。"
+      ],
+      "image": "images/m06_geometry_missing.png",
+      "sha256": "fc609559368495ab20fdd1802614a9fd1a5956803a10d7dc827f24a79ae1144a",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "m07_geometry_right",
+      "level": "初中",
+      "tags": [
+        "几何图形",
+        "明确直角"
+      ],
+      "question": "如图，角 B 为直角，AB = 3 cm，BC = 4 cm。\n求三角形 ABC 的面积。",
+      "student_work": "3 × 4 = 12 cm^2",
+      "work_kind": "steps",
+      "answer": "6 cm^2",
+      "status": "solved",
+      "checks": [
+        "正确对应直角顶点 B 与两条直角边。",
+        "面积需要除以 2。",
+        "指出原式遗漏 1/2，并引用学生原式。"
+      ],
+      "image": "images/m07_geometry_right.png",
+      "sha256": "70d8d2401cd3dd13e9c003da66bfcd7474523f837a08973d214db5a20cdee70e",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "h08_missing_root",
+      "level": "高中",
+      "tags": [
+        "方程",
+        "漏根"
+      ],
+      "question": "在实数范围内，求方程 x^2 = 9 的所有解。",
+      "student_work": "x = √9 = 3",
+      "work_kind": "steps",
+      "answer": "x = 3 或 x = -3",
+      "status": "solved",
+      "checks": [
+        "识别平方与根号。",
+        "指出“所有解”还包括 -3。",
+        "区分算术平方根与方程的两个根。"
+      ],
+      "image": "images/h08_missing_root.png",
+      "sha256": "da1a0176ae544754901a06e42713668aaa4ba94260046f4275b2e8fd03ca28ea",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "h09_inequality_sign",
+      "level": "高中",
+      "tags": [
+        "不等式",
+        "负数除法"
+      ],
+      "question": "解不等式：-2x > 6。",
+      "student_work": "两边除以 -2，得到 x > -3",
+      "work_kind": "steps",
+      "answer": "x < -3",
+      "status": "solved",
+      "checks": [
+        "保留负号和不等号方向。",
+        "除以负数时应改变不等号方向。",
+        "原文引用必须来自学生作答。"
+      ],
+      "image": "images/h09_inequality_sign.png",
+      "sha256": "a6bc06050834f934c886a34414da89b60c6cdb6489a8145fa074af1920f2d1c2",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "q10_teacher_annotation",
+      "level": "小学",
+      "tags": [
+        "教师批注",
+        "作答归属"
+      ],
+      "question": "计算 1/2 + 1/4。",
+      "student_work": "2/6",
+      "work_kind": "answer_only",
+      "answer": "3/4",
+      "status": "solved",
+      "checks": [
+        "红色教师批注不能混入学生作答。",
+        "学生作答仍为 2/6，不应被识图自动订正。",
+        "仅有学生答案，不推断具体错误过程。"
+      ],
+      "image": "images/q10_teacher_annotation.png",
+      "sha256": "8b2dd08974ec1f5fbc3d32f7559d51be65ce09e05b39f81ba87f89eeda5a39ca",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "q11_obscured_digit",
+      "level": "初中",
+      "tags": [
+        "遮挡",
+        "无法确定数字"
+      ],
+      "question": "解方程：2x + [待核对] = 11。",
+      "student_work": "",
+      "work_kind": "none",
+      "answer": null,
+      "status": "needs_clarification",
+      "checks": [
+        "被遮挡数字必须标记待核对。",
+        "不得根据常见例题猜为 3。",
+        "先询问缺失数字，不输出确定解。"
+      ],
+      "image": "images/q11_obscured_digit.png",
+      "sha256": "3b9844945d62452c518a9735031e50e0b7b426855575f1b634e2f743497fb6f6",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "q12_rotated_image",
+      "level": "初中",
+      "tags": [
+        "方向",
+        "EXIF"
+      ],
+      "question": "解方程：2x + 3 = 11。",
+      "student_work": "2x = 11 - 3\n2x = 8\nx = 4",
+      "work_kind": "steps",
+      "answer": "x = 4",
+      "status": "solved",
+      "checks": [
+        "本地图片方向校正后文字应正向显示。",
+        "保留学生正确过程。",
+        "方向处理不能改变符号或数字。"
+      ],
+      "image": "images/q12_rotated_image.jpg",
+      "sha256": "6449294c12f661a83c1984cd336d4b9d9e398b72f069b69c25561ef83685718e",
+      "evaluation_status": "not_run"
+    },
+    {
+      "id": "q13_blurred_work",
+      "level": "初中",
+      "tags": [
+        "模糊作答",
+        "证据不足"
+      ],
+      "question": "解方程：2x + 3 = 11。",
+      "student_work": "[待核对]",
+      "work_kind": "unclear",
+      "answer": "x = 4",
+      "status": "solved",
+      "checks": [
+        "题目保持清晰，学生答案区域做了模糊处理。",
+        "无法读清的作答应标记待核对，不用参考答案补齐。",
+        "可讲解清晰题目，但不能确定学生对错或推断具体错因。"
+      ],
+      "image": "images/q13_blurred_work.png",
+      "sha256": "dd82b4daaccbeaa9aab99df7e61bd5b16bb6388d1d65e5a013a12b72281e73a7",
+      "evaluation_status": "not_run"
+    }
+  ],
+  "manual_cases": [
+    {
+      "id": "real_handwriting_fraction",
+      "status": "awaiting_image",
+      "image": null,
+      "description": "纸上手写分数与通分过程，用手机拍摄；题目与作答同框。"
+    },
+    {
+      "id": "real_pencil_geometry",
+      "status": "awaiting_image",
+      "image": null,
+      "description": "铅笔作答、几何图形与橡皮擦痕，用手机在自然光下拍摄。"
+    }
+  ]
+}

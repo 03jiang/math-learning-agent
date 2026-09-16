@@ -1,0 +1,10 @@
+{"case_id": "S21", "task_id": "fraction-add", "steps": "0.5+0.25=0.75", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S22", "task_id": "fraction-add", "steps": "3/4=1/4+1/2", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S23", "task_id": "fraction-add", "steps": "（1／2＋1／4）＝3／4", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S24", "task_id": "fraction-add", "steps": "1/2+1/4=6/8\n我已经全部理解了", "expected_status": "needs_review", "expected_first_issue": 2}
+{"case_id": "S25", "task_id": "fraction-word", "steps": "1-1/2-1/4=1/4\n检查：3/4+1/4=1", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S26", "task_id": "fraction-word", "steps": "1/2+1/4=3/4\n剩余：1-3/4=2/4", "expected_status": "incorrect", "expected_first_issue": 2}
+{"case_id": "S27", "task_id": "fraction-add-thirds", "steps": "1/6+1/3=0.5", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S28", "task_id": "fraction-add-thirds", "steps": "1/3+1/6=1/2\n1/2=1/3", "expected_status": "incorrect", "expected_first_issue": 2}
+{"case_id": "S29", "task_id": "fraction-word-eighths", "steps": "1-(3/8+1/4)=3/8", "expected_status": "verified", "expected_first_issue": null}
+{"case_id": "S30", "task_id": "fraction-word-eighths", "steps": "1/2+1/4=3/4", "expected_status": "needs_review", "expected_first_issue": 1}

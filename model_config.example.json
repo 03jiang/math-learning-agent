@@ -1,0 +1,7 @@
+{
+  "mode": "mock",
+  "provider": "openai",
+  "model": "",
+  "timeout_seconds": 30,
+  "max_output_tokens": 2000
+}
