@@ -156,7 +156,7 @@ class CorrectionHTTPTests(unittest.TestCase):
             self.assertEqual(answer,context['student_work'])
             self.assertEqual(ANALYSIS,context['previous_analysis'])
             self.assertNotIn('reviews',context);self.assertNotIn('operation_ids',context)
-            self.assertEqual('photo-correction-v3',tutor.calls[0]['contract'])
+            self.assertEqual('photo-correction-v4',tutor.calls[0]['contract'])
 
     def test_invalid_comparison_has_no_retry_and_empty_work_never_sends(self):
         answer,result=corrected_example();result['comparison']['changes'][0]['previous_excerpt']='unseen work'

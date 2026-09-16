@@ -65,6 +65,47 @@ class StudySmokeTests(unittest.TestCase):
         self.assertEqual(5, len(server.requests))
         self.assertIsNone(audit.row('b06'))
 
+    def test_selected_three_requests_are_frozen_and_cannot_be_expanded_at_run(self):
+        audit=create_run(self.root/'selected',mode='local_http_test',row_ids=['b01','b02','b03'])
+        self.assertEqual(['b01','b02','b03'],list(audit.rows))
+        self.assertEqual(3,audit.manifest['planned_requests'])
+        verify_frozen(audit)
+        server=self.server(audit)
+        self.assertEqual(3,execute(audit,server=server)['counts']['reply_valid'])
+        execute(RunAudit(audit.directory),server=server)
+        self.assertEqual(3,len(server.requests))
+        self.assertFalse(notebook(audit).directory.exists())
+        audit.manifest['row_selection']=['b01','b02','b03','b04']
+        with self.assertRaises(ValueError): verify_frozen(audit)
+
+    def test_invalid_or_orphaned_row_selection_creates_no_plan(self):
+        for selected in ([],['b01','b01'],['b99'],['b06'],[True],'b01'):
+            path=self.root/'invalid-selection'
+            with self.assertRaises(ValueError): create_run(path,row_ids=selected)
+            self.assertFalse(path.exists())
+        audit=create_run(self.root/'with-parent',row_ids=['b02','b06'])
+        self.assertEqual(['b02','b06'],list(audit.rows))
+
+    def test_partial_missing_reason_passes_http_but_requires_save_confirmation(self):
+        audit=create_run(self.root/'partial',mode='local_http_test',row_ids=['b01'])
+        server=self.server(audit);valid=server.body
+        def partial(payload):
+            reply=valid(payload)
+            value=json.loads(reply['choices'][0]['message']['content'])
+            value['student_review'].update(verdict='partial',answer_feedback='通分和结果正确，但没有写出题目要求的通分理由。')
+            value['next_practice']='请补写通分理由。'
+            reply['choices'][0]['message']['content']=json.dumps(value,ensure_ascii=False)
+            return reply
+        server.body=partial
+        self.assertEqual(1,execute(audit,server=server)['counts']['reply_valid'])
+        self.assertFalse(notebook(audit).directory.exists())
+        accepted=decide(audit,'b01','accept',actor='local_fixture')
+        entry=notebook(RunAudit(audit.directory)).get(accepted['entry_id'])
+        self.assertEqual('partial',entry['analysis']['student_review']['verdict'])
+        self.assertTrue(accepted['reopen_verified'])
+        self.assertEqual([],entry['reviews'])
+        self.assertEqual(1,len(server.requests))
+
     def test_complete_local_http_demo_decisions_and_restart(self):
         result = run_local(self.root/'local')
         self.assertEqual(7, result['counts']['reply_valid'])
@@ -183,6 +224,9 @@ class StudySmokeTests(unittest.TestCase):
         self.assertEqual(3,len(server.requests))
         self.assertEqual(200,audit.row('b03')['call']['http_status'])
         self.assertEqual('invalid_content',audit.row('b03')['call']['error_code'])
+        self.assertEqual('student_review_fields',audit.row('b03')['call']['validation_issue'])
+        self.assertEqual([{'row_id':'b03','error_code':'invalid_content',
+                          'validation_issue':'student_review_fields'}],result['failures'])
         raw = json.loads(audit.row('b03')['diagnostic_content'])
         self.assertIn('diagnosis',raw['student_review'])
         self.assertIn('diagnosis',raw)

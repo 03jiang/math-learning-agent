@@ -5,12 +5,26 @@ WORK_KINDS = {'none':'未提供作答', 'answer_only':'只有最终答案', 'ste
 LEGACY_FIELDS = {'status','topic','summary','steps','answer','error_analysis','next_practice','clarification'}
 FIELDS = (LEGACY_FIELDS-{'error_analysis'}) | {'schema_version','student_review','knowledge_points','diagnosis','takeaway'}
 VERDICTS = {'not_provided':'未提供作答', 'correct':'当前作答正确', 'incorrect':'发现需订正之处',
-            'partial':'部分正确', 'uncertain':'还需核对'}
+            'partial':'部分正确 / 尚未完成', 'uncertain':'还需核对'}
+
+VALIDATION_ISSUES = {
+    'analysis_fields': '分析回复字段不完整或包含未知字段。',
+    'student_review_fields': 'student_review 字段不完整或包含未知字段；diagnosis 应在分析顶层。',
+    'incorrect_without_evidence': '判定步骤有误却未提供可核对的错误步骤。',
+    'partial_without_support': '未发现错误步骤时，部分完成必须说明遗漏，并且已给步骤全部正确。',
+}
 
 
-def object_fields(value, fields):
+class AnalysisValidationError(ValueError):
+    """只暴露固定错误码，不把模型字段名或回复正文写进异常。"""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(VALIDATION_ISSUES[code])
+
+
+def object_fields(value, fields, *, issue='analysis_fields'):
     if type(value) is not dict or set(value) != set(fields):
-        raise ValueError('分析回复字段不完整或包含未知字段。')
+        raise AnalysisValidationError(issue)
 
 
 def rows(value, maximum, name):
@@ -58,7 +72,8 @@ def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=
     text(value['takeaway'],'归纳方法',1500,solved)
     text(value['next_practice'],'自检问题',4000,True)
     review=value['student_review']
-    object_fields(review, {'work_kind','verdict','observed_approach','answer_feedback','comparisons'})
+    object_fields(review, {'work_kind','verdict','observed_approach','answer_feedback','comparisons'},
+                  issue='student_review_fields')
     kind=review['work_kind']
     if (type(kind) is not str or kind not in WORK_KINDS
             or type(review['verdict']) is not str or review['verdict'] not in VERDICTS):
@@ -90,8 +105,13 @@ def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=
         raise ValueError('已提供步骤，分析必须逐步对照并概括可观察的方法。')
     if solved and kind=='answer_only' and not review['answer_feedback'].strip():
         raise ValueError('仅有答案时应说明答案对照结果。')
-    if solved and kind=='steps' and review['verdict'] in ('incorrect','partial') and not errors:
-        raise ValueError('判定步骤有误却未提供可核对的错误步骤。')
+    if solved and kind=='steps' and not errors:
+        if review['verdict']=='incorrect':
+            raise AnalysisValidationError('incorrect_without_evidence')
+        if review['verdict']=='partial' and (
+                not review['answer_feedback'].strip()
+                or any(row['verdict']!='correct' for row in comparisons)):
+            raise AnalysisValidationError('partial_without_support')
     if review['verdict']=='correct' and any(row['verdict']!='correct' for row in comparisons):
         raise ValueError('整体判断与步骤对照矛盾。')
     diagnoses=rows(value['diagnosis'],4,'待核对错因')

@@ -71,6 +71,7 @@ def main(argv=None):
     parser.add_argument('--output', type=Path, help='预览/本机演练的新报告目录，不能已存在')
     parser.add_argument('--directory', type=Path, help='继续读取的已有运行目录')
     parser.add_argument('--config', type=Path, help='预览或本机演练时冻结的无密钥配置')
+    parser.add_argument('--rows', nargs='+', help='仅 preview 可用：选定请求编号，例如 b01 b02 b03；默认完整 7 次')
     parser.add_argument('--row', help='例如 b02')
     choice = parser.add_mutually_exclusive_group()
     choice.add_argument('--accept', action='store_true')
@@ -80,11 +81,13 @@ def main(argv=None):
     parser.add_argument('--budget-note', help='另行确认后的费用预算说明；程序限制请求数，不保证供应商金额封顶')
     args = parser.parse_args(argv)
     try:
+        if args.rows is not None and args.action != 'preview':
+            raise AuditError('请求范围只能在 preview 时选择，运行时不能修改。')
         if args.action in ('preview', 'local'):
             if args.output is None or args.directory is not None:
                 raise AuditError('请提供新的 --output 目录。')
             config = load_model_config(args.config) if args.config else None
-            result = (report(create_run(args.output, config=config)) if args.action == 'preview'
+            result = (report(create_run(args.output, config=config, row_ids=args.rows)) if args.action == 'preview'
                       else run_local(args.output, config))
         else:
             if args.directory is None or args.output is not None or args.config is not None:

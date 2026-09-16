@@ -14,7 +14,8 @@ from study.diagnosis import validate_analysis
 from study.example import QUESTION, STUDENT_WORK, ANALYSIS
 from study.images import prepare_image
 from study.notebook import Notebook, make_entry, learning_groups, summarize
-from study.service import StudyService, PhotoTransport, fingerprint
+from study.service import (StudyService, PhotoTransport, fingerprint, ANALYSIS_FORMAT_EXAMPLE,
+                           FORMAT_EXAMPLE_WORK, ANALYSIS_PROMPT, CORRECTION_PROMPT)
 import test_study as fixtures
 
 
@@ -88,6 +89,65 @@ class DiagnosisTests(unittest.TestCase):
                 'reference_step':'先两边减 3，再除以 2。','verdict':'correct','explanation':'合并写法与逐步逆运算等价。'}])
         result['diagnosis']=[]
         validate_analysis(result,student_work='x = (11 - 3) / 2 = 4',work_kind='steps')
+
+    def missing_explanation(self):
+        result=json.loads((fixtures.ROOT/'evaluation/study_smoke_local_responses.json').read_text())['responses']['b01']
+        result['student_review'].update(verdict='partial',
+            answer_feedback='计算和通分正确；题目要求的通分理由尚未写出，请补充分数单位的说明。')
+        result['next_practice']='请补写通分的理由。'
+        return result,'2/5 = 8/20，1/4 = 5/20\n2/5 + 1/4 = 13/20'
+
+    def test_correct_steps_with_missing_explanation_can_be_partial_and_reopened(self):
+        result,work=self.missing_explanation()
+        validate_analysis(result,student_work=work,work_kind='steps')
+        with tempfile.TemporaryDirectory() as directory:
+            book=Notebook(Path(directory)/'book')
+            entry=make_entry(uuid4().hex,question='计算并说明通分理由。',level='小学',my_work=work,analysis=result)
+            self.assertFalse(book.directory.exists())
+            book.save_new(entry)
+            self.assertEqual(result,Notebook(book.directory).get(entry['id'])['analysis'])
+            self.assertEqual([],Notebook(book.directory).get(entry['id'])['reviews'])
+
+    def test_partial_without_wrong_steps_needs_feedback_correct_comparisons_and_no_diagnosis(self):
+        result,work=self.missing_explanation()
+        bad_cases=[]
+        bad=deepcopy(result);bad['student_review']['answer_feedback']=' ';bad_cases.append(bad)
+        bad=deepcopy(result);bad['student_review']['comparisons'][0]['verdict']='uncertain';bad_cases.append(bad)
+        bad=deepcopy(result);bad['student_review']['comparisons']=[];bad_cases.append(bad)
+        bad=deepcopy(result);bad['diagnosis']=[{'category':'步骤表达','knowledge_point':bad['knowledge_points'][0],
+            'evidence':bad['student_review']['comparisons'][0]['student_excerpt'],
+            'explanation':'缺少理由','check_question':'请补充理由。'}];bad_cases.append(bad)
+        for bad in bad_cases:
+            with self.assertRaises(ValueError): validate_analysis(bad,student_work=work,work_kind='steps')
+        # 有真实错误步骤的 partial 仍可表达，保持原有诊断证据约束。
+        mixed=deepcopy(ANALYSIS);mixed['student_review']['verdict']='partial'
+        validate_analysis(mixed,student_work=STUDENT_WORK,work_kind='steps')
+
+    def test_incorrect_still_requires_a_quoted_incorrect_step(self):
+        result,work=self.missing_explanation()
+        result['student_review']['verdict']='incorrect'
+        with self.assertRaises(ValueError) as error:
+            validate_analysis(result,student_work=work,work_kind='steps')
+        self.assertEqual('incorrect_without_evidence',error.exception.code)
+
+    def test_complete_format_examples_follow_analysis_and_correction_contracts(self):
+        from study.corrections import validate_result
+        example=deepcopy(ANALYSIS_FORMAT_EXAMPLE)
+        validate_analysis(example,student_work=FORMAT_EXAMPLE_WORK,work_kind='steps')
+        self.assertIn(json.dumps(example,ensure_ascii=False,indent=2),ANALYSIS_PROMPT)
+        correction={'schema_version':1,'analysis':example,
+            'comparison':{'summary':'缺少旧步骤分析，不能判断某个旧步骤是否已订正。','changes':[]}}
+        validate_result(correction,previous_work='',previous_analysis=None,answer=FORMAT_EXAMPLE_WORK,work_kind='steps')
+        self.assertIn(json.dumps(correction,ensure_ascii=False,indent=2),CORRECTION_PROMPT)
+
+    def test_unknown_field_validation_issue_never_echoes_model_field_names(self):
+        result,work=self.missing_explanation()
+        untrusted='sk-'+'Q'*40
+        result['student_review'][untrusted]='untrusted extra field'
+        with self.assertRaises(ValueError) as error:
+            validate_analysis(result,student_work=work,work_kind='steps')
+        self.assertEqual('student_review_fields',error.exception.code)
+        self.assertNotIn(untrusted,str(error.exception))
 
     def test_missing_conditions_must_not_solve_or_diagnose(self):
         bad=deepcopy(ANALYSIS);bad.update(status='needs_clarification',clarification='图中长度是多少？',answer='')
@@ -164,7 +224,7 @@ class DiagnosticHTTPTests(unittest.TestCase):
             self.assertEqual(STUDENT_WORK,context['student_work'])
             self.assertEqual('steps',context['student_work_kind'])
             self.assertEqual(2,len(server.requests))
-            self.assertEqual('photo-study-v4',tutor.calls[1]['contract'])
+            self.assertEqual('photo-study-v5',tutor.calls[1]['contract'])
 
     def test_bad_evidence_or_wrong_kind_fails_once_without_retry(self):
         with LocalModelServer() as server:

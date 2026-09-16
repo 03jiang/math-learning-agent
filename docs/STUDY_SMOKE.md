@@ -10,6 +10,7 @@
 
 ```bash
 python tools/verify_study_live.py preview --output evaluation_runs/study-preview-001
+python tools/verify_study_live.py preview --output evaluation_runs/study-focused-001 --rows b01 b02 b03
 python tools/verify_study_live.py local --output evaluation_runs/study-local-001
 python tools/verify_study_live.py status --directory evaluation_runs/study-local-001
 python -B -m unittest test_study_smoke -v
@@ -17,6 +18,8 @@ python -B -m unittest discover -v
 ```
 
 目录已存在时不会覆盖；换一个新的名字。`local` 的全部回复和用量都是手写 HTTP 数据，自动保存决定标为 `local_fixture`，真实请求为 0。它不能作为解题准确率或模型自主行为的证据。
+
+`--rows` 只能在 preview 时选择范围，默认仍是完整 7 次。所选范围写入冻结计划，不能在运行时扩展；选择订正行必须同时包含原分析行。仅复测 b01–b03 时，计划和累计请求上限均为 3，不读取或拼接其他计划的原分析。选中原分析并不意味着自动确认保存。
 
 | 请求 | 输入范围 | 预期（待人工检查） |
 |---|---|---|
@@ -75,6 +78,8 @@ python tools/verify_study_live.py decide --directory evaluation_runs/study-previ
 
 `saved` 统计接受保存的操作数，不是独立题目数。`reserved_attempts` 统计已登记名额；发出情况未知时另外标记 `real_api_calls_unknown`，不会把未知算作 0 次。`usage_recorded_rows` 显示有用量的行数，用量缺失不当成零；当前不计算费用。`usage_source=handwritten_fixture` 表示本机用量也是模拟数据。
 
+`failures` 列出失败题号、接口/内容错误码与已知的固定校验错误码。例如 `student_review_fields` 表示 student_review 的字段不符合约定；不会把模型自造字段名、错误正文或凭证写进错误说明。旧记录没有细分类别时保持空值，不补造历史日志。
+
 HTTP 错误正文不记录。合法回复只保存最终 content 的结构化内容；非法 JSON 可以保留脱敏、限长诊断文本；凭证回显整条拒绝。供应商 `reasoning_content` 不展示或保存。
 
 如果进程在请求期间中断、运行记录写入失败或服务报错，会保留 `running` 或 `failed`。再次运行会停止；先查明这次尝试，不能删除记录来自动重试。要再尝试必须另建计划、重新确认预算，并在人工记录中保留原失败。已有私人数据和错误记录不会被覆盖。
@@ -87,6 +92,14 @@ HTTP 错误正文不记录。合法回复只保存最终 content 的结构化内
 - b02 有错误步骤：回复格式通过，但将后续正确的约分也标为 incorrect，说明结构检查不能替代数学核对。原始输出与未评分检查表保留在本机。
 - 提示词修订：明确 `diagnosis` 与 `student_review` 并列；各作答类型使用明确字段路径；逐步判断区分本步变形与整体结论，避免错误传播。分析提示词版本为 `photo-study-v4`，订正为 `photo-correction-v3`，识图提示词不变，分析 JSON schema 仍为 2。
 - 保留原解析、校验、确认和停止规则，不删除未知字段来把失败改成通过。新增手写回归案例复现字段错误、停止与禁止重试；它们不能证明真实模型已改好。再次付费验证需新建冻结计划并确认次数和预算，不能覆盖或续跑这份失败记录。
+
+同日修订版本 `eb5406fe4248a82c49df28cd42edcfb313dcd24a` 的实测结果：b01 第一条再次返回额外的 student_review.diagnosis，结构失败后停止；其余 6 条没有发送。输入 1,215、输出 757 token，HTTP 200。因此上轮提示词修订没有解决已观察到的结构问题，不能宣称改进成功；b02 未执行，正确约分误判的变化仍未知。两轮共 4 次尝试、2 条结构通过、2 条结构失败，不是 4 道独立题。
+
+这条新回复还合理指出了学生没有回答“为什么通分”。旧校验把 partial 一律要求成必须找到错误步骤，会拒绝这种漏答反馈。当前修订允许：有步骤、步骤全部正确、answer_feedback 明确说明漏答、diagnosis 为空的 partial。程序能验证反馈存在及证据一致性，不能自动证明漏答判断本身正确，仍须内容复核。判 incorrect 仍必须有错误步骤；不确定的步骤不能冒充全部正确，漏答也不能编造成错因证据。
+
+当前提示词改用另一道自写加法题展示完整 JSON 输出，分析/订正分别使用完整外层结构，版本为 `photo-study-v5` / `photo-correction-v4`。格式示例不是当前验证题的参考答案，验证题干、学生原作答和判断标准没有改动。原始失败仍失败，内存中的诊断副本不会保存。
+
+[DeepSeek 官方 JSON Output 说明](https://api-docs.deepseek.com/zh-cn/guides/json_mode/)要求提供格式样例；`json_object` 保证 JSON 语法，不等于本应用的字段与教学约束全部满足。此处仍使用原 Chat Completions 接口和应用校验，没有假定服务端支持 JSON Schema 强约束或添加自动付费修复调用。完整样例是否降低真实失败率尚未验证。
 
 - `study/service.py`：`analysis_context` / `build_payload` 让预览与发送共用输入；可选审计先登记后发送，普通页面不强制新增日志。
 - `study/run_audit.py`：原子日志、运行锁、尝试记录、去重与未知状态；业务存档和审计日志分开。

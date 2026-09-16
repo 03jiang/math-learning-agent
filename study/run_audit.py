@@ -178,6 +178,7 @@ class RunAudit:
     def status(self):
         counts = {name: 0 for name in ('pending', 'reply_valid', 'failed', 'running', 'blocked')}
         known, unknown, saved, rejected, usage_rows, elapsed = 0, False, 0, 0, [], 0
+        failures = []
         attempts = 0
         for row_id, planned in self.rows.items():
             row = self.row(row_id)
@@ -189,6 +190,9 @@ class RunAudit:
             attempts += 1
             counts[row['status']] += 1
             call = row['call'] or {}
+            if row['status'] == 'failed':
+                failures.append({'row_id': row_id, 'error_code': call.get('error_code'),
+                                 'validation_issue': call.get('validation_issue')})
             if row['mode'] == 'real_api':
                 known += call.get('attempted_requests', 0)
                 unknown |= row['status'] == 'running' or call.get('completion_unknown', False)
@@ -201,7 +205,7 @@ class RunAudit:
         mode = self.manifest['execution_mode']
         return {'mode': 'preview' if attempts == 0 and mode == 'real_api' else mode,
             'target_mode': mode, 'plan_id': self.manifest['plan_id'],
-            'planned_requests': len(self.rows), 'counts': counts, 'reserved_attempts': attempts,
+            'planned_requests': len(self.rows), 'counts': counts, 'failures': failures, 'reserved_attempts': attempts,
             'known_real_api_attempts': known, 'real_api_calls_unknown': unknown,
             'saved': saved, 'rejected': rejected, 'elapsed_ms': round(elapsed, 2),
             'usage_recorded_rows': len(usage_rows),

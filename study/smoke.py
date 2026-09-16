@@ -68,16 +68,32 @@ def make_rows(config):
     return rows
 
 
-def create_run(output, *, mode='real_api', config=None):
+def select_rows(rows, row_ids=None):
+    if row_ids is None:
+        return rows
+    known = {row['row_id'] for row in rows}
+    if (type(row_ids) is not list or not row_ids
+            or any(type(row_id) is not str or row_id not in known for row_id in row_ids)
+            or len(row_ids) != len(set(row_ids))):
+        raise AuditError('所选请求编号为空、重复或无效。')
+    selected = [row for row in rows if row['row_id'] in row_ids]
+    if any(row['depends_on'] and row['depends_on'] not in row_ids for row in selected):
+        raise AuditError('选择订正请求时必须同时选择其原分析，不能注入另一计划的结果。')
+    return selected
+
+
+def create_run(output, *, mode='real_api', config=None, row_ids=None):
     if mode not in ('real_api', 'local_http_test'):
         raise AuditError('未知运行模式。')
     config = config or default_config()
     if (config.mode, config.provider, config.api_format) != ('api', 'deepseek', 'chat_completions'):
         raise AuditError('文字验证使用 DeepSeek Chat Completions 配置。')
+    selected = select_rows(make_rows(config), row_ids)
     audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-text-smoke-v1',
         'execution_mode': mode, 'code': source_snapshot(), 'config': asdict(config),
         'prompt_versions': {'analyze': ANALYSIS_PROMPT_VERSION, 'reanalyze': CORRECTION_PROMPT_VERSION},
-        'rows': make_rows(config), 'planned_requests': 7, 'real_requests_on_preview': 0,
+        'row_selection': [row['row_id'] for row in selected],
+        'rows': selected, 'planned_requests': len(selected), 'real_requests_on_preview': 0,
         'cost_estimate_cny': None, 'human_scoring': '未评分'})
     write_json(audit.directory / 'review.json', {'label': '人工检查表；空白为未评，不是 0 分',
         'rows': [{'row_id': r['row_id'], 'expected_behavior': r['expected_behavior'],
@@ -92,7 +108,7 @@ def verify_frozen(audit, *, live=False):
     current = source_snapshot()
     if current != audit.manifest['code']:
         raise AuditError('代码或 Git 版本已变化；请新建预览，不续跑旧计划。')
-    if make_rows(ModelConfig(**audit.manifest['config'])) != list(audit.rows.values()):
+    if select_rows(make_rows(ModelConfig(**audit.manifest['config'])), audit.manifest.get('row_selection')) != list(audit.rows.values()):
         raise AuditError('案例或请求与当前实现不符。')
     if live and (not current['commit'] or current['dirty']):
         raise AuditError('真实验证需要干净的 Git 提交，请先提交并重新预览。')
@@ -236,10 +252,12 @@ def decide(audit, row_id, action, *, actor='user'):
 def report(audit):
     state = audit.status()
     write_json(audit.directory / 'status.json', state)
+    analyses = sum(row['operation'] == 'analyze' for row in audit.rows.values())
+    corrections = len(audit.rows) - analyses
     lines = ['# 当前主流程文字验证', '',
         '**本机手写响应，只验证软件流程。**' if state['mode'] == 'local_http_test' else '**请求预览 / 真实执行账本；以每行状态为准。**',
         '', f"计划编号：`{state['plan_id']}`", '',
-        '5 次分析 + 2 次依赖已确认存档的订正，最多 7 次。预览不请求模型。',
+        f'{analyses} 次分析 + {corrections} 次依赖已确认存档的订正，最多 {len(audit.rows)} 次。预览不请求模型。',
         '费用未知，不等于免费；请求次数是硬上限，预算说明是人工确认记录，不是供应商扣费封顶。',
         '参考答案只用于人工核对，不进入模型请求。review.json 的空值为未评。', '',
         '| 请求 | 题目 | 操作 | 依赖 | 状态 | 保存决定 |', '|---|---|---|---|---|---|']
