@@ -55,7 +55,7 @@ def service():
     config=load_model_config(ROOT/'model_config.deepseek.example.json')
     config=replace(config,model=st.session_state.get('photo_model',config.model),max_output_tokens=4096,timeout_seconds=60)
     key=st.session_state.get('photo_api_key','') or os.environ.get('DEEPSEEK_API_KEY','')
-    return StudyService(config,key)
+    return StudyService(config,key,output_mode=os.environ.get('MATH_STUDY_OUTPUT_MODE','json_object'))
 
 
 def reply_origin():

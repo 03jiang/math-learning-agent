@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 from model_api import load_model_config
 from study.run_audit import AuditError, RunAudit, read_json, write_json
+from study.output_contract import FUNCTIONS, OUTPUT_MODES
 from study.smoke import create_run, execute, decide, report, notebook, entry_id, verify_frozen
 
 
@@ -24,17 +25,24 @@ def local_fixture(audit):
                    and r['context']['student_work'] == context['student_work']]
         if len(matches) != 1:
             raise AuditError('没有匹配的手写响应，不能伪造成功。')
-        return {'object': 'chat.completion', 'model': 'local-handwritten-fixture',
+        envelope = {'object': 'chat.completion', 'model': 'local-handwritten-fixture',
             'choices': [{'index': 0, 'finish_reason': 'stop', 'message': {'role': 'assistant',
                 'content': json.dumps(replies[matches[0]['row_id']], ensure_ascii=False),
                 'reasoning_content': 'DO_NOT_RECORD_INTERNAL_REASONING'}}],
             'usage': {'prompt_tokens': 100, 'completion_tokens': 50, 'total_tokens': 150}}
+        if audit.manifest.get('output_mode') == 'strict_tool':
+            choice = envelope['choices'][0]
+            arguments = choice['message']['content']
+            choice['finish_reason'] = 'tool_calls'
+            choice['message'].update(content=None, tool_calls=[{'type': 'function', 'id': 'local-fixture-call',
+                'function': {'name': FUNCTIONS[matches[0]['operation']], 'arguments': arguments}}])
+        return envelope
     return reply
 
 
-def run_local(output, config=None):
+def run_local(output, config=None, output_mode='json_object'):
     from http_test_support import LocalModelServer
-    audit = create_run(output, mode='local_http_test', config=config)
+    audit = create_run(output, mode='local_http_test', config=config, output_mode=output_mode)
     with LocalModelServer() as server:
         server.body = local_fixture(audit)
         first = execute(audit, server=server)
@@ -72,6 +80,8 @@ def main(argv=None):
     parser.add_argument('--directory', type=Path, help='继续读取的已有运行目录')
     parser.add_argument('--config', type=Path, help='预览或本机演练时冻结的无密钥配置')
     parser.add_argument('--rows', nargs='+', help='仅 preview 可用：选定请求编号，例如 b01 b02 b03；默认完整 7 次')
+    parser.add_argument('--output-mode', choices=OUTPUT_MODES,
+                        help='仅 preview/local 可用；默认 json_object；strict_tool 为 Beta 单次强制函数返回格式')
     parser.add_argument('--row', help='例如 b02')
     choice = parser.add_mutually_exclusive_group()
     choice.add_argument('--accept', action='store_true')
@@ -83,12 +93,15 @@ def main(argv=None):
     try:
         if args.rows is not None and args.action != 'preview':
             raise AuditError('请求范围只能在 preview 时选择，运行时不能修改。')
+        if args.output_mode is not None and args.action not in ('preview', 'local'):
+            raise AuditError('返回格式已冻结，运行时不能切换或回退。')
         if args.action in ('preview', 'local'):
             if args.output is None or args.directory is not None:
                 raise AuditError('请提供新的 --output 目录。')
             config = load_model_config(args.config) if args.config else None
-            result = (report(create_run(args.output, config=config, row_ids=args.rows)) if args.action == 'preview'
-                      else run_local(args.output, config))
+            output_mode = args.output_mode or 'json_object'
+            result = (report(create_run(args.output, config=config, row_ids=args.rows, output_mode=output_mode))
+                      if args.action == 'preview' else run_local(args.output, config, output_mode))
         else:
             if args.directory is None or args.output is not None or args.config is not None:
                 raise AuditError('请提供已有 --directory；配置已冻结，不能在续跑时替换。')

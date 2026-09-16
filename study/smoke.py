@@ -10,6 +10,7 @@ from model_api import ModelConfig, load_model_config
 from study.corrections import validate_result
 from study.diagnosis import validate_analysis
 from study.notebook import Notebook, make_entry
+from study.output_contract import endpoint, CONTRACT_VERSION
 from study.run_audit import AuditError, RunAudit, digest, read_json, write_json, stamp
 from study.service import (StudyService, PhotoTransport, ANALYSIS_PROMPT, CORRECTION_PROMPT,
                            ANALYSIS_PROMPT_VERSION, CORRECTION_PROMPT_VERSION,
@@ -40,7 +41,7 @@ def default_config():
                    max_output_tokens=4096, timeout_seconds=60)
 
 
-def make_rows(config):
+def make_rows(config, output_mode='json_object'):
     data = read_json(CASES)
     if data['schema_version'] != 1 or len(data['cases']) != 5:
         raise AuditError('文字验证必须有 5 道已冻结题目。')
@@ -51,7 +52,7 @@ def make_rows(config):
         rows.append({'row_id': row_id, 'case_id': case['id'], 'title': case['title'],
                      'operation': 'analyze', 'depends_on': None, 'context': context,
                      'expected_behavior': case['expected_behavior'], 'human_reference': case['human_reference'],
-                     'payload': build_payload(config, ANALYSIS_PROMPT, context)})
+                     'payload': build_payload(config, ANALYSIS_PROMPT, context, output_mode=output_mode)})
         if case['correction']:
             correction = case['correction']
             next_context = analysis_context(case['question'], case['level'], correction['student_work'],
@@ -82,15 +83,18 @@ def select_rows(rows, row_ids=None):
     return selected
 
 
-def create_run(output, *, mode='real_api', config=None, row_ids=None):
+def create_run(output, *, mode='real_api', config=None, row_ids=None, output_mode='json_object'):
     if mode not in ('real_api', 'local_http_test'):
         raise AuditError('未知运行模式。')
     config = config or default_config()
     if (config.mode, config.provider, config.api_format) != ('api', 'deepseek', 'chat_completions'):
         raise AuditError('文字验证使用 DeepSeek Chat Completions 配置。')
-    selected = select_rows(make_rows(config), row_ids)
+    provider_endpoint = endpoint(config, output_mode)
+    selected = select_rows(make_rows(config, output_mode), row_ids)
     audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-text-smoke-v1',
         'execution_mode': mode, 'code': source_snapshot(), 'config': asdict(config),
+        'output_mode': output_mode, 'provider_endpoint': provider_endpoint,
+        'output_contract': CONTRACT_VERSION if output_mode == 'strict_tool' else 'json-object-v1',
         'prompt_versions': {'analyze': ANALYSIS_PROMPT_VERSION, 'reanalyze': CORRECTION_PROMPT_VERSION},
         'row_selection': [row['row_id'] for row in selected],
         'rows': selected, 'planned_requests': len(selected), 'real_requests_on_preview': 0,
@@ -108,7 +112,13 @@ def verify_frozen(audit, *, live=False):
     current = source_snapshot()
     if current != audit.manifest['code']:
         raise AuditError('代码或 Git 版本已变化；请新建预览，不续跑旧计划。')
-    if select_rows(make_rows(ModelConfig(**audit.manifest['config'])), audit.manifest.get('row_selection')) != list(audit.rows.values()):
+    config = ModelConfig(**audit.manifest['config'])
+    output_mode = audit.manifest.get('output_mode', 'json_object')
+    expected_contract = CONTRACT_VERSION if output_mode == 'strict_tool' else 'json-object-v1'
+    if (audit.manifest.get('provider_endpoint') != endpoint(config, output_mode)
+            or audit.manifest.get('output_contract') != expected_contract):
+        raise AuditError('返回格式或供应商地址与当前实现不符。')
+    if select_rows(make_rows(config, output_mode), audit.manifest.get('row_selection')) != list(audit.rows.values()):
         raise AuditError('案例或请求与当前实现不符。')
     if live and (not current['commit'] or current['dirty']):
         raise AuditError('真实验证需要干净的 Git 提交，请先提交并重新预览。')
@@ -136,12 +146,14 @@ def prepare(audit, row):
         raise AuditError('对照存档已更新，不能用旧计划订正。')
     context = correction_context(previous, row['context']['student_work'],
                                  work_kind=row['context']['student_work_kind'])
-    return previous, build_payload(ModelConfig(**audit.manifest['config']), CORRECTION_PROMPT, context)
+    return previous, build_payload(ModelConfig(**audit.manifest['config']), CORRECTION_PROMPT, context,
+        output_mode=audit.manifest.get('output_mode', 'json_object'), operation='reanalyze')
 
 
 def execute(audit, *, key='', max_requests=None, confirm_plan=None, budget_note=None, server=None):
     """只执行尚未尝试、依赖已确认的行；任一失败或中断后禁止自动续发。"""
     live = audit.manifest['execution_mode'] == 'real_api'
+    output_mode = audit.manifest.get('output_mode', 'json_object')
     verify_frozen(audit, live=live)
     if live:
         if server is not None:
@@ -151,7 +163,7 @@ def execute(audit, *, key='', max_requests=None, confirm_plan=None, budget_note=
                 or type(budget_note) is not str or not budget_note.strip() or len(budget_note) > 500):
             raise AuditError('需确认完整计划编号、累计请求上限和费用预算说明。')
         # 仅检查格式；不把凭证写进 approval。
-        StudyService(ModelConfig(**audit.manifest['config']), key)
+        StudyService(ModelConfig(**audit.manifest['config']), key, output_mode=output_mode)
         if key in budget_note:
             raise AuditError('预算说明不能包含凭证。')
     elif server is None:
@@ -179,7 +191,9 @@ def execute(audit, *, key='', max_requests=None, confirm_plan=None, budget_note=
             audit.expected_payload = payload
             config = ModelConfig(**audit.manifest['config'])
             service = StudyService(config, key if live else 'local-test-key',
-                None if live else PhotoTransport(server.chat_url), audit=audit, request_id=row_id)
+                None if live else PhotoTransport(server.chat_url.replace('/chat/completions',
+                    '/beta/chat/completions') if output_mode == 'strict_tool' else server.chat_url),
+                audit=audit, request_id=row_id, output_mode=output_mode)
             context = planned['context']
             try:
                 if planned['operation'] == 'analyze':
@@ -257,6 +271,7 @@ def report(audit):
     lines = ['# 当前主流程文字验证', '',
         '**本机手写响应，只验证软件流程。**' if state['mode'] == 'local_http_test' else '**请求预览 / 真实执行账本；以每行状态为准。**',
         '', f"计划编号：`{state['plan_id']}`", '',
+        f"返回格式：`{audit.manifest.get('output_mode', 'json_object')}`；地址：`{audit.manifest.get('provider_endpoint', '见冻结配置')}`。",
         f'{analyses} 次分析 + {corrections} 次依赖已确认存档的订正，最多 {len(audit.rows)} 次。预览不请求模型。',
         '费用未知，不等于免费；请求次数是硬上限，预算说明是人工确认记录，不是供应商扣费封顶。',
         '参考答案只用于人工核对，不进入模型请求。review.json 的空值为未评。', '',

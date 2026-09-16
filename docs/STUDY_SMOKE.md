@@ -80,7 +80,7 @@ python tools/verify_study_live.py decide --directory evaluation_runs/study-previ
 
 `failures` 列出失败题号、接口/内容错误码与已知的固定校验错误码。例如 `student_review_fields` 表示 student_review 的字段不符合约定；不会把模型自造字段名、错误正文或凭证写进错误说明。旧记录没有细分类别时保持空值，不补造历史日志。
 
-HTTP 错误正文不记录。合法回复只保存最终 content 的结构化内容；非法 JSON 可以保留脱敏、限长诊断文本；凭证回显整条拒绝。供应商 `reasoning_content` 不展示或保存。
+HTTP 错误正文不记录。合法回复只保存最终 content（json_object 模式）或指定函数 arguments（strict_tool 模式）的结构化内容；非法 JSON 可以保留脱敏、限长诊断文本；凭证回显整条拒绝。供应商 `reasoning_content` 不展示或保存。
 
 如果进程在请求期间中断、运行记录写入失败或服务报错，会保留 `running` 或 `failed`。再次运行会停止；先查明这次尝试，不能删除记录来自动重试。要再尝试必须另建计划、重新确认预算，并在人工记录中保留原失败。已有私人数据和错误记录不会被覆盖。
 
@@ -99,12 +99,33 @@ HTTP 错误正文不记录。合法回复只保存最终 content 的结构化内
 
 当前提示词改用另一道自写加法题展示完整 JSON 输出，分析/订正分别使用完整外层结构，版本为 `photo-study-v5` / `photo-correction-v4`。格式示例不是当前验证题的参考答案，验证题干、学生原作答和判断标准没有改动。原始失败仍失败，内存中的诊断副本不会保存。
 
-[DeepSeek 官方 JSON Output 说明](https://api-docs.deepseek.com/zh-cn/guides/json_mode/)要求提供格式样例；`json_object` 保证 JSON 语法，不等于本应用的字段与教学约束全部满足。此处仍使用原 Chat Completions 接口和应用校验，没有假定服务端支持 JSON Schema 强约束或添加自动付费修复调用。完整样例是否降低真实失败率尚未验证。
+[DeepSeek 官方 JSON Output 说明](https://api-docs.deepseek.com/zh-cn/guides/json_mode/)要求提供格式样例；`json_object` 不能替代本应用的字段、重复键与教学约束检查。第三轮使用完整样例后的实际结果见下文，不能据此宣称真实失败率降低。
+
+2026-09-16 第三轮提交 `6efb4c44c52fec751f34a3a2bd658e45391a2166`：定向计划 b01–b03，第一条 b01 收到 HTTP 200，但 student_review 内同一个 answer_feedback 出现两次，内容相同也被拒绝；另两条未发，保存 0 条。用量输入 1,634、输出 629 token。此次没有再出现嵌套 diagnosis；回复指出漏答理由，但结构仍失败。旧摘要 validation_issue 为空，因为重复键由通用解析器拦截；现在新增固定错误码 duplicate_json_key，旧记录保持原样。
+
+三轮共 5 次调用、2 条结构通过、3 条失败，累计输入 5,663、输出 3,095 token，均未保存或教师评分。重复调试题不是独立测试样本；数学正确性及已知约分误判仍需复核。原始报告只保存在本机，不加入公开包。
+
+## 可选的 strict 返回格式（尚待真实兼容性验证）
+
+为减少自由生成 JSON 的结构错误，新增 `strict_tool`：单次强制返回指定函数的参数，并保留本地所有检查。它是结果格式通道，不执行任何函数或工具，不发送第二轮工具结果，也不构成模型选工具的 Agent 循环。
+
+[DeepSeek 官方 strict 说明](https://api-docs.deepseek.com/zh-cn/guides/tool_calls/)要求使用 Beta 地址、函数 strict=true，所有对象属性必填且 additionalProperties=false。[接口说明](https://api-docs.deepseek.com/api/create-chat-completion/)说明指定工具的强制调用不支持思考模式，因此本通道只接受 thinking=disabled。使用基础类型与 enum；长度、逐字引用、错因证据和保存决定仍由应用检查。
+
+```bash
+python tools/verify_study_live.py local --output evaluation_runs/strict-local-001 --output-mode strict_tool
+python tools/verify_study_live.py preview --output evaluation_runs/strict-one-001 --rows b01 --output-mode strict_tool
+python -B -m unittest test_structured_output -v
+```
+
+预览冻结 `https://api.deepseek.com/beta/chat/completions`、返回模式、schema、指定函数与所有参数。模型名仍来自配置，默认不变。真实运行只读取冻结模式，不接受临时切换；第一条返回 HTTP 400、多个函数调用、未知函数、截断内容、重复字段或不合格引用，都会失败停止，不改用原接口重试。供应商 Beta 对当前账号、模型和这份 schema 的接受情况仍未知；下一次只计划 b01、最多 1 次，须另行确认后执行。
+
+`study/output_contract.py` 的 parse_output 拦截相同值的重复字段、非标准数值和非法 JSON；strict_response_text 只提取一个指定函数的 arguments，不执行它。根目录旧教学解析器继续拒绝工具调用。`study/service.py` 的三个操作共用此通道，页面可用环境配置选择；目前只进行了手写 HTTP 验证，不表示真实识图或教学正确。
 
 - `study/service.py`：`analysis_context` / `build_payload` 让预览与发送共用输入；可选审计先登记后发送，普通页面不强制新增日志。
 - `study/run_audit.py`：原子日志、运行锁、尝试记录、去重与未知状态；业务存档和审计日志分开。
 - `study/smoke.py`：冻结计划、真实执行门禁、依赖检查、保存确认与重新读取。
 - `tools/verify_study_live.py`：用户入口；本机模式和真实模式显式分开。
 - `test_study_smoke.py`：针对新调用链的边界测试；旧页面、协议和持久化继续跑全量回归。
+- `test_structured_output.py`：严格返回格式、本机七步流程、重复键、HTTP 拒绝与无回退、确认及恢复的回归。
 
 下一验收是：另行批准预算后，完成一组非预设文字题的真实分析—确认保存—再次订正—重新打开，检查真实输出并记录失败。随后再验证图片原始转录、人工修正和分析。本轮尚未验收真实文字质量、照片质量或模型选工具能力。

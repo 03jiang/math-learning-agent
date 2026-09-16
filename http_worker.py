@@ -14,11 +14,12 @@ MAX_HTTP_BYTES = 262144
 
 def endpoint_kind(url):
     if url in {OPENAI_ENDPOINT, 'https://api.openai.com/v1/chat/completions',
-               'https://api.deepseek.com/chat/completions', 'https://api.deepseek.com/v1/chat/completions'}:
+               'https://api.deepseek.com/chat/completions', 'https://api.deepseek.com/v1/chat/completions',
+               'https://api.deepseek.com/beta/chat/completions'}:
         return 'real_api'
     parsed = urlsplit(url)
     if (parsed.scheme == 'http' and parsed.hostname == '127.0.0.1' and parsed.port
-            and parsed.path in {'/v1/responses', '/chat/completions', '/v1/chat/completions'} and not parsed.username and not parsed.password
+            and parsed.path in {'/v1/responses', '/chat/completions', '/v1/chat/completions', '/beta/chat/completions'} and not parsed.username and not parsed.password
             and not parsed.query and not parsed.fragment):
         return 'local_http_test'
     raise ValueError('不允许的模型服务地址')
