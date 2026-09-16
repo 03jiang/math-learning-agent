@@ -1,34 +1,22 @@
-# Math Learning Agent · 数学学习与错题复盘助手
+# 数学错题助手
 
-面向 K12 数学学习的本地产品原型：把题目、学生作答、参考解法和订正历史放在同一个学习流程中，帮助学生看见差异、理解依据、留下可复习的总结。
+把题目、自己的解题过程和订正记录放在一起，方便以后复习。
 
-**这是有人参与确认的 AI 学习工作流，采用固定编排，不是自主行动的多 Agent 系统。** Python / Streamlit / DeepSeek Chat Completions / JSON。使用 Codex 辅助开发；工程验证与教学效果分开陈述。
+你可以上传题目和作答照片，也可以直接输入文字。先核对识别出来的内容，再对照参考解法，看看可能错在哪里。值得复习的题目，由你确认后存进错题本；重新做一遍时，可以比较前后的变化，保留每次订正。
 
-## 三分钟了解
+这是一个用 Python 和 Streamlit 做的本地原型，使用 Codex 辅助开发。目前提供离线演示和 DeepSeek 接口配置，真实照片的识别、解题质量和学习效果还没有验证。
 
-1. 上传题目照片，可另外上传作答照片；支持旋转、裁剪和直接输入文字。
-2. 核对题干、图形条件、学生原作答及类型，避免把错误答案或教师批注当题干。
-3. 查看参考解法与学生步骤对照、引用原文的错因假设、知识点和自检建议。
-4. 确认后收进错题本；再次作答，查看前后变化，决定保存或放弃订正。
-5. 按知识点回顾、导出记录，误删的题目可从回收站恢复。
+## 可以做什么
 
-只有最终答案时不推断错误过程；条件不足先澄清；一次答对不自动标为掌握。模型提出分析，程序校验结构与引用，用户决定保存。
+- **整理题目。** 题目和作答可以分开上传，支持旋转、裁剪，也可以直接输入文字。
+- **对照解题过程。** 查看参考步骤、自己的原作答、可能的错因和练习建议。只有最终答案时，不猜测中间哪里做错了；缺少条件时，先补充题目。
+- **保存和复习。** 确认后加入错题本，补充笔记，再次作答并选择是否保存订正。可以按知识点回顾、导出记录，误删的题目可以恢复。
 
-```mermaid
-flowchart LR
-    A[题目与作答照片] --> B[识别草稿]
-    B --> C[用户核对]
-    C --> D[参考解法与作答对照]
-    D --> E[待确认总结]
-    E -->|确认| F[本地错题本]
-    F --> G[新作答与前后对照]
-    G --> E
-    F --> H[同类题回顾]
-```
+模型的分析只是建议。上传照片、查看分析不会自动收藏；一次答对也不会自动被记为“已经掌握”。
 
-## 无密钥运行
+## 先试试演示版
 
-已在 macOS / Python 3.12 验证。Linux 测试由 GitHub Actions 执行，结果以仓库 Actions 页面为准；Windows 暂不支持 `fcntl` 文件锁。
+不需要 API 密钥，也不会产生模型调用费用。
 
 ```bash
 git clone https://github.com/03jiang/math-learning-agent.git
@@ -39,37 +27,40 @@ python -m pip install -r requirements-lock.txt
 python -m study.launch --demo
 ```
 
-打开终端显示的本地地址，默认 [127.0.0.1:8518](http://127.0.0.1:8518/)。端口占用可加 `--port 8520`。点击“载入演示题” → 核对 → 分析 → 收藏 → 在错题本“填入演示订正” → 核对、分析、确认保存或放弃。
+打开终端显示的本地地址，默认是 [127.0.0.1:8518](http://127.0.0.1:8518/)。端口被占用时，可以在启动命令后加 `--port 8520`。
 
-**演示模式只回放一道人工作答样例，不执行 OCR、不调用模型，也不为任意新题目编造回复。** 数据保存在独立的 `data/demo-study/`。真实模式运行 `python -m study.launch`，在侧栏隐藏输入密钥；点击识图、分析或订正分析才发送当前题目内容，不自动重试。真实照片流程尚未验收，见 [验证状态](docs/STATUS.md)。
+点击“载入演示题”，核对题目后分析，再点“确认加入错题本”。进入错题本，点击“填入演示订正”，就能试一遍分析、放弃或保存订正的过程。具体操作见[演示说明](docs/DEMO.md)。
 
-## 产品岗位阅读入口
+**演示版使用一道人工作答样例和预先写好的回复，不做真实识图，也不调用模型。** 改成其他题目后，不会继续给出这道示例题的分析。演示记录单独保存在 `data/demo-study/`。
 
-- [产品定义、优先级与指标设计](docs/PRODUCT.md)
-- [五分钟演示脚本](docs/DEMO.md)
-- [系统边界、状态与失败处理](docs/ARCHITECTURE.md)
-- [实际验证、证据分级与待办](docs/STATUS.md)
-- [简历条目与面试准备](portfolio/APPLICATION_PACK.md)
+接入真实模型时，运行 `python -m study.launch`，在侧栏填写密钥。只有点击识图、分析或订正分析时，才会发送相关题目内容；请求可能计费，失败后不自动重试。配置方法见 [API_SETUP.md](API_SETUP.md)。
 
-## 测试与目录
+发布记录中的本地测试环境是 macOS / Python 3.12。Linux 测试结果见仓库的 Actions 页面；当前文件锁实现不支持 Windows 原生运行。
+
+## 项目说明
+
+| 想了解什么 | 从这里看 |
+|---|---|
+| 为什么做、功能怎么取舍 | [设计说明](docs/PRODUCT.md) |
+| 怎么演示主要功能 | [五分钟演示](docs/DEMO.md) |
+| 代码怎么组织、数据怎么保存 | [技术说明](docs/ARCHITECTURE.md) |
+| 哪些测过、哪些还没有验证 | [测试与待办](docs/STATUS.md) |
+| 怎么介绍这个项目 | [项目介绍与面试准备](portfolio/APPLICATION_PACK.md) |
+
+## 开发和测试
 
 ```bash
 python -m unittest discover -v
 ```
 
-测试使用临时存档、合成图片和本机 HTTP 手写响应，**不需要模型密钥，不产生真实 API 请求**。图片测试需要中文字体：macOS 使用 STHeiti；Ubuntu 安装 `fonts-noto-cjk`。CI 安装同一份锁定依赖后运行全量测试。
+这些测试使用临时文件、合成图片和本机模拟的 HTTP 回复，不需要模型密钥，也不向真实模型发送请求。图片测试需要中文字体：macOS 使用 STHeiti，Ubuntu 安装 `fonts-noto-cjk`。CI 使用 `requirements-lock.txt` 安装依赖后运行测试。
 
-| 目录 / 文件 | 内容 |
-|---|---|
-| `study/` | 图片、分析协议、错题存储、订正对照与界面 |
-| `test_*.py` | 核心、页面、HTTP、持久化与发布边界测试 |
-| `evaluation/photo_cases_v1/` | 13 张程序排版的自写题，评分为空；不是实际学生照片 |
-| `evaluation/`、`prompts/` | 原四题模块的成对提示词评估脚手架 |
-| `docs/`、`portfolio/` | 产品说明、演示、验收边界与求职材料 |
-| `tools/export_public.py` | 按明确清单生成公开源码，排除个人存档与运行报告 |
+主要代码在 `study/`：图片处理、模型回复检查、错题保存、订正和页面都在这里。`test_*.py` 是相关测试。`evaluation/photo_cases_v1/` 中有 13 张程序生成的自写题图片，不是真实学生照片，目前还没有人工评分。`evaluation/` 和 `prompts/` 还保留了早期四道分数题的评估代码，它们不代表当前照片功能的测试结果。
 
-每题 JSON 保存原作答、分析来源、订正历史和操作版本。写入使用文件锁与原子替换，重复操作去重，旧版本建议拒绝。上传、预览和模型回复不自动写入错题本。公开仓库不包含用户照片或密钥，图片样例全部自写合成。
+每道题用一个 JSON 文件保存原作答、分析来源和订正历史。写入时会检查记录版本，防止重复保存或用旧分析覆盖新记录。密钥、个人照片和错题记录不随源码公开；公开图片样例均为自写合成内容。
 
-目前是单机单用户原型，没有部署在线服务、账号系统或学生学习效果研究。GitHub 展示源码与产品设计，不等于已上线教育产品。
+## 目前的限制
 
-**English:** A learner-confirmed math review workflow: separate problem and student-work input, evidence-grounded comparison, explicit notebook saves, correction history, and topic review. The deterministic offline demo makes no model calls. Live photo quality and learning outcomes remain unverified.
+这是单机、单用户原型，不是已经上线的教学产品，没有账号系统或真实学生使用数据。程序按预先写好的流程调用模型，并不是能自主行动的多 Agent 系统。测试可以检查保存、确认和异常处理是否正常，不能证明所有题目都能讲对，更不能证明学习成绩会提高。详细记录见[测试与待办](docs/STATUS.md)。
+
+**English:** A local app for reviewing math mistakes. Add a problem and your work, check the text, compare the steps, and choose what to save. It keeps correction history for later review. Built with Python, Streamlit, and Codex assistance. The offline demo uses prepared examples; live photo analysis and learning outcomes have not been evaluated.

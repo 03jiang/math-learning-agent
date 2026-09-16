@@ -29,16 +29,16 @@ def show_comparison(result,*,example=False):
                 st.text(row['current_excerpt'])
             st.write(row['explanation'])
     if not result['comparison']['changes']:
-        st.caption('本次未提供逐步变化对照；可展开本次分析，结合前后作答核对。')
-    st.info('接下来做一步：'+result['analysis']['next_practice'])
-    st.caption('人工编写的订正示例，不是模型实测。' if example else '变化判断来自模型，不自动记录独立做对或已掌握。')
+        st.caption('这次没有逐步对照结果。可以展开完整分析，再和前后的作答一起核对。')
+    st.info('再试一步：'+result['analysis']['next_practice'])
+    st.caption('这是人工编写的订正示例，不是实际模型回复。' if example else '这是模型对前后变化的判断，不会自动记为“独立做对”或“已掌握”。')
 
 
 def render(notebook,entry):
     from study.ui import service, run_once, show_analysis, reply_origin
     from study.demo_service import enabled as demo_enabled, fill_correction, ORIGIN as DEMO_ORIGIN
     st.subheader('订正后再分析')
-    st.caption('写下新的完整作答，再和之前保存的作答对照。分析完成后，由你决定是否保存这一轮。')
+    st.caption('写下这次的完整解题过程，和上次保存的作答比较。看完分析后，再决定要不要保存。')
     entry_id=entry['id']
     answer_key='correction-answer-'+entry_id
     kind_key='correction-kind-'+entry_id
@@ -46,7 +46,7 @@ def render(notebook,entry):
     drafts=st.session_state.setdefault('correction_drafts',{})
     if st.session_state.pop('correction-reset-'+entry_id,False):
         for key in (answer_key,kind_key,confirm_key): st.session_state.pop(key,None)
-        st.success('本次订正与分析已保存。原作答和自评记录保持原样。')
+        st.success('订正和分析已保存，原来的作答和自评记录没有改动。')
     previous=baseline(entry)
     label='原作答' if previous['id']=='original' else '上一次已保存的订正'
     with st.expander('本次对照：'+label):
@@ -70,11 +70,11 @@ def render(notebook,entry):
                 'operation_id':old['operation_id'] if old and old['fingerprint']==current else uuid4().hex,
                 'origin':reply_origin()}
         except (ValueError,OSError) as exc: st.error(str(exc))
-    st.caption('离线回放人工编写的订正对照，不调用模型；确认后才保存到演示错题本。' if demo_enabled() else
-               '点击分析才发送本题照片、前后作答和此前分析，可能计费；分析不会自动保存。无需模型时可在下方手动记录复习。')
+    st.caption('这里是人工编写的订正演示，不调用模型。只有确认后，才会存进演示错题本。' if demo_enabled() else
+               '点击分析后，会发送本题照片、前后作答和此前分析，可能计费，但不会自动保存。也可以不使用模型，在下方手动记录复习。')
     pending=drafts.get(entry_id)
     active=pending if pending and pending['fingerprint']==current else None
-    if pending and not active: st.info('作答、类型或本题版本已变化，旧订正分析不能保存，请重新核对并分析。')
+    if pending and not active: st.info('作答、作答类型或已保存的记录有变化，之前的订正分析已失效。请重新核对并分析。')
     if active:
         show_comparison(active['result'],example=active['origin']==DEMO_ORIGIN)
         with st.expander('查看本次完整分析'): show_analysis(active['result']['analysis'],example=active['origin']==DEMO_ORIGIN)

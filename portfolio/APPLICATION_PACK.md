@@ -1,42 +1,57 @@
-# AI 产品 / 教育科技产品求职材料
+# 项目介绍与面试准备
 
-## 简历项目条目
+下面只整理这个项目，不代替完整简历。介绍个人分工时，只写自己实际参与、能够解释的部分。
 
-**数学学习与错题复盘助手｜个人 AI 产品原型，Codex 辅助开发**
+## 中文简历条目
 
-- 定义数学错题复盘场景，将照片输入、题干/作答核对、参考解法对照、确认收藏和再次订正串成可运行流程，使用 Codex 辅助实现 Python / Streamlit 原型。
-- 设计 AI 分析边界：只有答案时不推断错误过程，错因引用学生原文并以假设呈现；区分模型建议、用户确认与学习掌握，支持放弃更新、历史追溯和误删恢复。
-- 建立无密钥完整演示、13 张合成图片评估场景和分层验收方法；以自动测试验证交互与持久化，规划转录准确性、差异定位有效率及订正完成率等产品指标。
+**数学错题助手｜个人项目，Codex 辅助开发**
 
-不添加未经验证的学习提升、用户数或准确率，也不称为自主多 Agent 系统。工程测试数可以引用实际 CI 结果，不能改写为教学准确率。
+- 使用 Python 和 Streamlit，在 Codex 辅助下搭建数学错题整理原型，支持题目与作答上传、文字核对、步骤对照、错题保存和再次订正。
+- 将模型分析和保存操作分开：用户确认后才写入错题本，保留原作答与订正历史，支持放弃更新和误删恢复。只有最终答案时，不推测学生的错误过程。
+- 准备无需密钥的演示、13 张自写合成题图和自动测试，检查回复格式、页面操作、重复保存及异常处理；整理了后续识图、分析质量和使用体验的评估计划。
+
+需要写测试数量时，引用对应版本的实际结果。不要把软件测试通过数写成教学准确率，也不要添加没有测过的用户量或学习提升。
 
 ## English résumé version
 
-**Math Learning Agent — Personal AI Product Prototype, built with Codex assistance**
+**Math Mistake Review App — Personal project, built with Codex assistance**
 
-- Defined a math mistake-review workflow spanning problem and student-work capture, learner verification, step comparison, confirmed saves, and correction review; translated it into a Python / Streamlit prototype with Codex assistance.
-- Designed evidence and confirmation boundaries: answer-only submissions do not trigger inferred reasoning diagnoses; suggested causes reference student work, while model feedback, self-assessment, and mastery remain distinct.
-- Prepared a deterministic no-key demo, 13 synthetic image cases, automated workflow tests, and a measurement plan covering transcription accuracy, useful error localization, and correction completion. Live photo quality and learning outcomes remain unvalidated.
+- Built a local Python and Streamlit prototype with Codex assistance. Users can add a math problem and their work, check the text, compare solution steps, and save corrections for later review.
+- Kept AI analysis separate from saving: users choose whether to keep an update, while original work and correction history remain available. Answer-only submissions are not used to guess the student's reasoning errors.
+- Prepared a no-key demo, 13 synthetic problem images, and automated checks for response formats, UI actions, duplicate saves, and failures. Planned further evaluation of photo recognition, analysis quality, and usability; these outcomes have not yet been validated.
 
-## 60 秒介绍
+## 一分钟介绍
 
-“这个数学错题复盘原型关注学生自己的解题过程，让学生找到最早的差异，把订正变成可复习的记录。
+“我做的是一个数学错题整理工具。学生把题目和自己的解题过程放进来，核对文字后，可以看参考步骤和自己哪里不一样，再决定要不要保存。
 
-项目先从四道分数题验证确认与保存，再扩展到上传自有题目和作答。关键选择是先核对输入，再看有原文证据的分析，确认后才保存；只有最终答案时不让系统猜学生怎么算的。
+这个项目最早从四道分数题开始，先验证确认和保存，后来加入了照片输入和订正记录。我比较在意的是保留学生原来的过程：如果只写了一个答案，就不能让模型猜他中间怎么算错的。模型给出分析以后，也不能直接替学生改记录。
 
-原型用 Codex 辅助开发，提供无密钥演示和自动测试。现在能证明流程可运行、更新可追溯，还不能证明真实识图和学习效果。下一步先做教师核对与学生任务观察，再决定移动端和复习推荐的优先级。”
+代码和测试大量使用了 Codex 辅助。现在有可以运行的原型和不用密钥的演示，但真实照片识别、分析质量和学习效果还没验证。接下来先请教师核对结果，再观察学生用起来是否方便。”
 
-## 面试准备
+## 常见追问
 
-| 问题 | 回答线索 |
-|---|---|
-| 需求有何证据？ | 当前是场景假设与原型探索，没有访谈与真实用户数据，不虚构调研 |
-| 与拍照搜题相比关注什么？ | 原作答证据、错误差异、订正历史；价值仍要验证 |
-| 为什么增加核对步骤？ | 输入错误会传递给诊断；需衡量准确性与操作成本的取舍 |
-| AI 判断错了怎么办？ | 缺条件先澄清、保留原文、错因待核对、用户可不保存；校验不能代替教师评价 |
-| 如何定义成功？ | 分层看输入耗时、差异定位、订正完成和同类题迁移，不只看生成成功 |
-| 个人贡献与 AI 辅助？ | 方向、需求和验收由人与 Codex 协作形成，代码与测试大量由 Codex 辅助；讲清实际参与，不声称独立手写全部代码 |
+**为什么做这个？有用户调研吗？**
 
-先独立走一次 [五分钟演示](../docs/DEMO.md)，能解释原文引用、未确认不保存、订正不等于掌握。简历附 GitHub 链接，以 [产品定义](../docs/PRODUCT.md) 展示产品判断，以可运行流程证明可落地。
+想尝试让学生把自己的解题过程和参考步骤放在一起看，而不只是留一份正确答案。目前是场景假设和原型探索，还没有用户访谈或真实学生数据。
 
-这是项目材料，不是完整个人简历。教育、实习、其他技能和岗位信息尚未提供，没有代填。
+**为什么要先核对识别结果？**
+
+识别错了一个符号，后面的分析就可能跟着错。如果把学生的错答提前改对，也会丢掉原来的过程。不过核对会增加操作，所以还要观察用户愿不愿意做、要花多久。
+
+**模型判断错了怎么办？**
+
+保留原文，把错因当作待核对的建议，允许用户不保存。程序会检查引用和回复格式，但这些检查不能替代教师判断数学内容。
+
+**这个 Agent 能自主做什么？**
+
+目前按程序写好的流程调用模型，不是自主多 Agent 系统。模型不直接改文件，也不能自行判断学生已经学会。这里主要展示模型交互、回复检查和用户确认怎样连在一起。
+
+**怎么判断项目有没有用？**
+
+先看题目有没有识别对、分析有没有找到关键错误，再看用户能否方便地完成订正。至于能不能帮助学生独立做出类似的新题，需要另外设计学习测试，不能用演示回答代替。
+
+**哪些是自己做的，哪些用了 Codex？**
+
+这是人与 Codex 协作完成的项目，代码和测试大量使用了 AI 辅助。面试前要按实际情况整理自己参与的需求、检查过的实现和处理过的问题，不声称全部代码都是独立手写，也不把还讲不清的模块算作熟练掌握。
+
+准备介绍前，先独立走一遍[五分钟演示](../docs/DEMO.md)，对照[技术说明](../docs/ARCHITECTURE.md)找到保存、引用检查和异常处理的代码。项目的实际测试与限制见[测试与待办](../docs/STATUS.md)。

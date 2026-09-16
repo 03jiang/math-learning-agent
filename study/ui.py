@@ -83,7 +83,7 @@ def show_analysis(analysis, *, example=False):
     if analysis.get('schema_version')==2:
         st.markdown('**这道题在学什么**')
         st.write(' · '.join(analysis['knowledge_points']) or '先补充条件，再确定知识点。')
-    st.markdown('**参考解法 · 可核对的思路与步骤**')
+    st.markdown('**参考解题步骤**')
     st.write(analysis['summary'])
     for index, step in enumerate(analysis['steps'],1): st.write(f'{index}. {step}')
     if analysis['answer']:
@@ -92,10 +92,10 @@ def show_analysis(analysis, *, example=False):
     if analysis.get('error_analysis'):
         st.markdown('**对照你的作答**')
         st.write(analysis['error_analysis'])
-        st.caption('这是旧版分析，没有结构化步骤证据。')
+        st.caption('这份旧分析没有逐步对照，请结合原作答核对。')
     if analysis.get('schema_version')==2:
         review=analysis['student_review']
-        st.markdown('**你的作答与参考解法**')
+        st.markdown('**逐步对照你的作答**')
         st.write(VERDICTS[review['verdict']])
         if review['work_kind']=='none':
             st.info('还没有提供作答。这里只讲解题目，不判断你的错因。')
@@ -108,9 +108,9 @@ def show_analysis(analysis, *, example=False):
         first_error=next((i for i,row in enumerate(review['comparisons']) if row['verdict']=='incorrect'),None)
         for index,row in enumerate(review['comparisons']):
             with st.container(border=True):
-                label={'correct':'这一步可成立','incorrect':'这一步需要订正','uncertain':'这一步还需核对'}[row['verdict']]
+                label={'correct':'这一步是对的','incorrect':'这一步需要订正','uncertain':'这一步还需核对'}[row['verdict']]
                 st.markdown(f'**对照 {index+1} · {label}**')
-                if index==first_error: st.caption('本次对照中最早发现的问题，从这里开始订正。')
+                if index==first_error: st.caption('先看这里：这是本次分析中最早发现的问题。')
                 student,reference=st.columns(2)
                 with student:
                     st.caption('你的原作答')
@@ -119,30 +119,30 @@ def show_analysis(analysis, *, example=False):
                     st.caption('对应的参考做法')
                     st.write(row['reference_step'])
                 st.write(row['explanation'])
-        st.markdown('**可能需要巩固的内容**')
+        st.markdown('**这次可能错在哪里**')
         for item in analysis['diagnosis']:
             with st.container(border=True):
                 st.write(f"{item['knowledge_point']} · {item['category']}（待核对）")
-                st.text('作答证据：'+item['evidence'])
+                st.text('你写的是：'+item['evidence'])
                 st.write(item['explanation'])
-                st.write('用这个问题核对：'+item['check_question'])
+                st.write('试着回答：'+item['check_question'])
         if not analysis['diagnosis']:
-            st.caption('本次没有可确认的具体错因假设。知识点表示本题涉及的内容，不等于你的薄弱项。')
+            st.caption('目前还不能确定具体错因。列出的知识点只是这道题涉及的内容，不代表你都不会。')
         if analysis['takeaway']:
             st.markdown('**同类题怎么做**')
             st.write(analysis['takeaway'])
     if analysis['next_practice']:
-        st.info('下一步自检：'+analysis['next_practice'])
+        st.info('再试一步：'+analysis['next_practice'])
     st.caption('以上是人工编写的展示示例。' if example else '以上是模型生成的学习建议，尚未经过教师核对。')
 
 
 def render_capture(notebook):
     entry_id=draft()
-    st.title('拍下题目，慢慢弄懂')
-    st.caption('把题目和你的作答一起放进来。核对后看步骤对照，归纳知识点，再收进错题本。')
+    st.title('整理一道数学题')
+    st.caption('上传题目和你的解题过程，先核对文字，再看分析。值得复习的内容可以存进错题本。')
     if demo_enabled():
         from study.demo_service import load_draft
-        st.info('离线完整演示 · 仅回放一道人工作答示例，零模型请求。收藏会写入独立演示目录。')
+        st.info('这是离线演示，使用一道人工作答示例，不调用模型。保存的内容单独存放，不影响普通错题本。')
         dirty=bool(st.session_state.photo_question or st.session_state.photo_work or st.session_state.photo_image
                    or st.session_state.get('photo_work_image') or st.session_state.get('photo_saved'))
         st.button('载入演示题',on_click=load_draft,disabled=dirty)
@@ -173,25 +173,25 @@ def render_capture(notebook):
         st.subheader('2 · 核对后再分析')
         recognized=st.session_state.photo_recognition
         if recognized:
-            st.success('已分别识别题目与作答 · 请逐项核对')
+            st.success('文字已识别，请检查题目和作答有没有识别错。')
             for warning in recognized.get('warnings',[]): st.warning(warning)
-            st.caption('请核对题目、原作答和作答类型。原作答保留当时的错误，不要先改成正确答案；教师批注应移出作答栏。')
+            st.caption('请保留自己当时的答案，包括写错的地方，不要先改对。教师批注请移出作答栏，再检查下面选的作答类型。')
         question=st.text_area('题目文字',key='photo_question',height=170,max_chars=6000,on_change=unconfirm_question,
-                              placeholder='在这里修正识别结果，或输入任意一道数学题。')
+                              placeholder='修改识别错的文字，或直接输入题目。')
         level=st.selectbox('学习阶段',LEVELS,key='photo_level')
         my_work=st.text_area('我的答案或解题过程（可选）',key='photo_work',height=140,max_chars=3000,
-            on_change=unconfirm_question,placeholder='保留原来的答案，每行写一步。没有过程也可以，只是暂时不能判断具体错因。')
+            on_change=unconfirm_question,placeholder='按原样写下答案，每行一步。只有答案也可以，但暂时无法判断哪一步出错。')
         work_kind='none'
         if my_work.strip():
             work_kind=st.radio('当前作答包含什么',['unclear','answer_only','steps'],
                 format_func=WORK_KINDS.get,key='photo_work_kind',horizontal=True,on_change=unconfirm_question)
-        st.caption('核对范围包括题干、图形、原作答及作答类型。修改任一作答内容后需要重新勾选。')
+        st.caption('请一起核对题目、图形条件、原作答和作答类型。改过内容后，需要重新勾选确认。')
         confirmed=st.checkbox('题干与图形条件已核对',key='photo_confirmed')
         current=fingerprint(question,level,my_work,image,work_kind,work_image=work_image)
         if st.button('分析这道题',type='primary',disabled=not(question.strip() and confirmed)):
             key='analysis-v3-'+current+'-'+st.session_state.get('photo_model','')
             try:
-                with st.spinner('正在分析思路与解题步骤…'):
+                with st.spinner('正在分析解题步骤…'):
                     result=run_once(key,lambda:service().analyze(question,level,my_work,image,work_kind=work_kind,work_image=work_image))
                 st.session_state.photo_analysis={'fingerprint':current,'value':result,
                                                 'origin':reply_origin()}
@@ -202,17 +202,17 @@ def render_capture(notebook):
             st.info('尚未连接 DeepSeek。需要识图或分析时，展开左侧“连接 DeepSeek”；现在也可以先手动收藏。')
         stored=st.session_state.photo_analysis
         active=stored if stored and stored['fingerprint']==current else None
-        if stored and not active: st.info('题目或作答已修改，原分析不再用于本次收藏，请重新分析。')
+        if stored and not active: st.info('你改过题目或作答，之前的分析不再适用。请重新分析后再保存。')
         if active:
-            st.success('已分析 · 可以对照步骤整理错因')
+            st.success('分析完成，可以对照步骤检查。')
             show_analysis(active['value'],example=active['origin']==DEMO_ORIGIN)
         failed=[key for key,value in st.session_state.photo_calls.items() if 'error' in value]
         if failed and st.button('清除失败记录，允许重新点击请求'):
             for key in failed: del st.session_state.photo_calls[key]
             st.rerun()
     st.divider()
-    st.subheader('3 · 留下一条自己的总结')
-    st.caption('不用等到完全弄懂再收藏。模型的错因是假设；你核对后再选择，“尚不确定”也可以。')
+    st.subheader('3 · 记下这道题的提醒')
+    st.caption('还没完全弄懂，也可以先收藏。可能的错因需要自己核对，不确定时选“尚不确定”。')
     # 分析完成或输入变化后刷新表单默认分类，避免保留分析前的“待整理”。
     form_revision=current+('-analyzed' if active else '-manual')
     with st.form('photo-save-'+entry_id+'-'+form_revision):
@@ -239,7 +239,7 @@ def render_notebook(notebook,entries):
         render_trash(notebook)
         return
     if not entries:
-        st.info('还没有收藏。去“拍照解题”加入第一道值得回顾的题。')
+        st.info('还没有收藏的题目。到“拍照解题”添加第一道题。')
         return
     cols=st.columns([2,1,1])
     query=cols[0].text_input('搜索题目或知识点')
@@ -294,7 +294,7 @@ def render_notebook(notebook,entries):
         with st.expander(row['at'][:10]+' · '+row['outcome']):
             st.write(row['answer'] or '未写答案。')
             st.write(row['note'])
-    st.caption('“独立做对”是本次自评，不自动判断已经掌握。')
+    st.caption('“独立做对”是你对这次复习的自评，不表示已经完全掌握。')
     st.download_button('导出这道题（JSON，含照片）',json.dumps(entry,ensure_ascii=False,indent=2),
                        file_name='数学错题-'+entry['id'][:8]+'.json',mime='application/json')
     with st.expander('收起这道题'):
@@ -308,7 +308,7 @@ def render_notebook(notebook,entries):
 
 def render_trash(notebook):
     entries,_=notebook.list(archived=True)
-    st.caption('回收站保留原题、两张照片、分析、订正和自评；这里的题不计入学习回顾。')
+    st.caption('回收站中的题目不计入学习回顾。原题、照片、分析和订正记录都还在，可以恢复。')
     if not entries:
         st.info('回收站是空的。')
         return
@@ -326,7 +326,7 @@ def render_trash(notebook):
 
 def render_summary(entries):
     st.title('学习回顾')
-    st.caption('根据你确认的错因与复习记录整理，不推断能力等级。')
+    st.caption('这里汇总你保存的错因和复习记录，不给你的数学能力打分。')
     summary=summarize(entries)
     for col,label,key in zip(st.columns(4),['收藏题目','还需练习','本次自评做对','复习次数'],
                              ['total','needs_practice','self_reported_correct','review_count']): col.metric(label,summary[key])
@@ -345,12 +345,12 @@ def render_summary(entries):
                    key=lambda e:e['reviews'][-1]['at'] if e['reviews'] else e['created_at'])
     if not pending: st.success('已收藏的题最近一次都记录为独立做对，可以隔一段时间再自测。')
     for entry in pending[:5]: st.write(f"**{entry['topic']}** · {entry['question'][:100]}")
-    st.caption('这里按未复习或仍需练习的题目，优先展示等待较久的记录。没有调用模型。')
+    st.caption('优先列出较久没复习、或还需要练习的题目。这份列表由记录整理，没有调用模型。')
     report=['# 数学学习回顾',f"收藏 {summary['total']} 题，复习 {summary['review_count']} 次；还需练习 {summary['needs_practice']} 题。",
             '复习结果来自自评，不代表已掌握。','\n## 知识点',*[f'- {k}：{v} 题' for k,v in summary['topics'].items()],
             '\n## 已记录错因',*[f'- {k}：{v} 题' for k,v in summary['reasons'].items()]]
     st.subheader('把同类题放在一起总结')
-    st.caption('按你收藏时确认的分类归纳。模型的方法建议保留来源，具体错因只统计你选择的结果。')
+    st.caption('按你保存的分类整理，错因只统计你选过的结果。模型建议会标出来源，供你核对。')
     report.append('\n## 同类题的方法与自检')
     for group in learning_groups(entries):
         title=f"{group['topic']} · {group['count']} 题 · {group['needs_practice']} 题还需练习"
@@ -381,15 +381,15 @@ def render(directory,view):
     notebook=Notebook(directory)
     entries,errors=notebook.list()
     with st.sidebar:
-        st.title('🌱 数学学习工作台')
-        st.caption('小学 · 初中 · 高中\n\n自己的题目，自己的复习记录。')
+        st.title('数学错题助手')
+        st.caption('整理题目，记录订正，留待下次复习。')
         st.metric('已收藏',len(entries))
         with st.expander('连接 DeepSeek',expanded=False):
             offline=os.environ.get('MATH_PHOTO_OFFLINE')=='1' or demo_enabled()
             st.text_input('DeepSeek API 密钥',type='password',key='photo_api_key',disabled=offline)
             st.text_input('模型名称',value='deepseek-flash',key='photo_model',disabled=offline)
             st.caption('密钥只用于当前会话，不写入文件。点击识图或分析时才请求，可能产生费用。')
-            if offline: st.info('当前为离线演示入口，DeepSeek 请求已关闭。')
+            if offline: st.info('当前是离线演示，不会向 DeepSeek 发送请求。')
             elif os.environ.get('DEEPSEEK_API_KEY'): st.caption('已从启动环境载入密钥。')
             st.button('清除会话密钥',on_click=clear_key)
         st.caption('照片只在确认收藏后写入本地错题本。摄像头需浏览器授权。')
