@@ -76,6 +76,37 @@ def fingerprint(question,level,my_work,image,work_kind=None,*,work_image=None):
     return hashlib.sha256(json.dumps(data,ensure_ascii=False).encode()).hexdigest()
 
 
+def analysis_context(question, level, my_work='', *, work_kind=None):
+    """预览和实际发送共用的输入检查，不需要密钥或模型实例。"""
+    text(question,'题目',6000,True)
+    text(my_work,'我的作答',3000)
+    if level not in LEVELS: raise ValueError('未知学段。')
+    return {'confirmed_question':question,'school_level':level,'student_work':my_work,
+            'student_work_kind':work_kind_for(my_work,work_kind)}
+
+
+def correction_context(entry, answer, *, work_kind):
+    from study.notebook import validate_entry, ensure_active
+    validate_entry(entry)
+    ensure_active(entry)
+    text(answer,'本次订正',3000,True)
+    context=analysis_context(entry['question'],entry['level'],answer,work_kind=work_kind)
+    previous=baseline(entry)
+    return {**context,'previous_student_work':previous['work'],'previous_analysis':previous['analysis']}
+
+
+def build_payload(config, instructions, context, image=None, work_image=None):
+    photos=[(role,photo) for role,photo in (('question',image),('student_work',work_image)) if photo is not None]
+    context={**context,'attached_images':[{'position':index,'role':role} for index,(role,_) in enumerate(photos,1)]}
+    content=[{'type':'text','text':json.dumps(context,ensure_ascii=False)}]
+    for _,photo in photos:
+        image_bytes(photo)
+        content.append({'type':'image_url','image_url':{'url':'data:image/jpeg;base64,'+photo['base64']}})
+    return {'model':config.model,'messages':[{'role':'system','content':instructions},{'role':'user','content':content}],
+        'response_format':{'type':'json_object'},'max_tokens':config.max_output_tokens,
+        'temperature':config.temperature,'thinking':{'type':config.thinking},'stream':False}
+
+
 class PhotoTransport:
     def __init__(self, endpoint='https://api.deepseek.com/chat/completions'):
         self.endpoint=endpoint
@@ -108,31 +139,32 @@ class PhotoTransport:
 
 
 class StudyService:
-    def __init__(self,config,key,transport=None):
+    def __init__(self,config,key,transport=None,*,audit=None,request_id=None):
         if config.mode!='api' or config.provider!='deepseek' or config.api_format!='chat_completions':
             raise ValueError('请使用 DeepSeek Chat Completions 配置。')
         if type(key) is not str or not key or not key.isascii() or any(c.isspace() for c in key) or len(key)>4096:
             raise ModelAPIError('missing_key')
         self.config,self.key=config,key
         self.transport=transport or PhotoTransport(config.base_url+'/chat/completions')
+        if audit is not None and self.transport.kind != audit.manifest['execution_mode']:
+            raise ValueError('传输模式与审计计划不符。')
         self.calls=[]
+        self.audit,self.request_id=audit,request_id
 
     def call(self,operation,instructions,context,image=None,work_image=None):
-        photos=[(role,photo) for role,photo in (('question',image),('student_work',work_image)) if photo is not None]
-        context={**context,'attached_images':[{'position':index,'role':role} for index,(role,_) in enumerate(photos,1)]}
-        content=[{'type':'text','text':json.dumps(context,ensure_ascii=False)}]
-        for _,photo in photos:
-            image_bytes(photo)
-            content.append({'type':'image_url','image_url':{'url':'data:image/jpeg;base64,'+photo['base64']}})
-        payload={'model':self.config.model,'messages':[{'role':'system','content':instructions},{'role':'user','content':content}],
-            'response_format':{'type':'json_object'},'max_tokens':self.config.max_output_tokens,
-            'temperature':self.config.temperature,'thinking':{'type':self.config.thinking},'stream':False}
+        payload=build_payload(self.config,instructions,context,image,work_image)
         record={'operation':operation,'kind':self.transport.kind,
             'contract':'photo-correction-v2' if operation=='reanalyze' else 'photo-study-v3','attempted_requests':0,
             'http_status':None,'usage':None,'status':'running','completion_unknown':False,'error_code':None,
-            'request_hash':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest()}
+            'request_hash':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
+            'prompt_sha256':hashlib.sha256(instructions.encode()).hexdigest(),
+            'requested_model':self.config.model}
         self.calls.append(record)
+        # 审计登记失败时不发送。running 标记先落盘，崩溃后不能自动重发。
+        if self.audit is not None:
+            self.audit.begin(self.request_id,operation,payload,self.key)
         start=time.monotonic()
+        raw,value=None,None
         try:
             envelope=self.transport.send(payload,self.key,self.config.timeout_seconds,record)
             if self.key in json.dumps(envelope,ensure_ascii=False): raise ModelAPIError('credential_echo')
@@ -163,6 +195,8 @@ class StudyService:
             raise ValueError('模型回复未通过校验，本次没有保存或自动重试。') from None
         finally:
             record['elapsed_ms']=round((time.monotonic()-start)*1000,2)
+            if self.audit is not None:
+                self.audit.finish(self.request_id,record,value,raw,self.key)
 
     def recognize(self,image=None,work_image=None,*,question_text=''):
         text(question_text,'输入题目',6000)
@@ -172,20 +206,9 @@ class StudyService:
                                                'provided_question':question_text},image,work_image)
 
     def analyze(self,question,level,my_work='',image=None,*,work_kind=None,work_image=None):
-        text(question,'题目',6000,True)
-        text(my_work,'我的作答',3000)
-        if level not in LEVELS: raise ValueError('未知学段。')
-        kind=work_kind_for(my_work,work_kind)
-        return self.call('analyze',ANALYSIS_PROMPT,{'confirmed_question':question,'school_level':level,
-            'student_work':my_work,'student_work_kind':kind},image,work_image)
+        return self.call('analyze',ANALYSIS_PROMPT,
+            analysis_context(question,level,my_work,work_kind=work_kind),image,work_image)
 
     def reanalyze(self,entry,answer,*,work_kind):
-        from study.notebook import validate_entry, ensure_active
-        validate_entry(entry)
-        ensure_active(entry)
-        text(answer,'本次订正',3000,True)
-        kind=work_kind_for(answer,work_kind)
-        previous=baseline(entry)
-        return self.call('reanalyze',CORRECTION_PROMPT,{'confirmed_question':entry['question'],
-            'school_level':entry['level'],'student_work':answer,'student_work_kind':kind,
-            'previous_student_work':previous['work'],'previous_analysis':previous['analysis']},entry['image'],entry.get('work_image'))
+        return self.call('reanalyze',CORRECTION_PROMPT,correction_context(entry,answer,work_kind=work_kind),
+                         entry['image'],entry.get('work_image'))

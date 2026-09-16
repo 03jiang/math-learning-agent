@@ -12,6 +12,8 @@
 
 ## 原四题模块的评估
 
+当前照片主流程的**文字**请求预览、本机 HTTP 演练和确认保存验证，见 [文字验证说明](docs/STUDY_SMOKE.md)。默认零真实请求；共 5 次分析与 2 次依赖已确认结果的订正，不使用旧四题的参考答案上下文。
+
 默认仅生成请求预览，零 API 调用。报告必须使用新目录；已有输出不会被静默覆盖。
 
 ```bash
@@ -23,7 +25,7 @@ python evaluate_teaching.py --help
 真实评估须显式 `--live`，提供 API 模式配置与当前进程环境密钥；先通过四题 smoke 再考虑批量。通过终端的隐藏输入或其他明确的会话方式设置 `DEEPSEEK_API_KEY`，不要把值直接写进会留历史的命令。
 
 ```bash
-python evaluate_teaching.py --suite smoke --live --config model_config.deepseek.example.json --output evaluation_runs/live-smoke-new
+python evaluate_teaching.py --suite smoke --live --max-requests 4 --config model_config.deepseek.example.json --output evaluation_runs/live-smoke-new
 ```
 
 本页不自动执行真实调用。完整参数、请求冻结和续跑限制见 `--help` 以及 [评估计划](evaluation/PLAN.md)。批量是原四题教学协议，不是照片 OCR 批量工具。

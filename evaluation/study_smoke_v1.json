@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "suite": "study-text-smoke-v1",
+  "purpose": "当前主流程的自写文字验证材料，不是保留集或教学成绩",
+  "cases": [
+    {
+      "id": "fraction-correct",
+      "title": "分数加法：正确步骤",
+      "question": "计算 2/5 + 1/4，并说明为什么要通分。",
+      "level": "小学",
+      "student_work": "2/5 = 8/20，1/4 = 5/20\n2/5 + 1/4 = 13/20",
+      "work_kind": "steps",
+      "expected_behavior": "认可正确方法，说明统一分数单位，引用学生实际步骤；不贴能力标签。",
+      "human_reference": "13/20；两项分别化为 8/20、5/20。",
+      "correction": null
+    },
+    {
+      "id": "fraction-wrong-step",
+      "title": "分数加法：分子分母直接相加",
+      "question": "计算 2/3 + 1/6。",
+      "level": "小学",
+      "student_work": "2/3 + 1/6 = 3/9\n3/9 = 1/3",
+      "work_kind": "steps",
+      "expected_behavior": "指出第一步不成立；承认 3/9 约分为 1/3 本身正确；错因只作为待核对假设。",
+      "human_reference": "2/3 = 4/6，结果为 5/6。",
+      "correction": {
+        "student_work": "2/3 = 4/6\n2/3 + 1/6 = 4/6 + 1/6 = 5/6",
+        "work_kind": "steps",
+        "expected_behavior": "核对新步骤，与已保存原作答对照；一次订正不代表掌握。",
+        "human_reference": "5/6；原错误出现在相加规则，订正采用通分。"
+      }
+    },
+    {
+      "id": "fraction-answer-only",
+      "title": "分数减法：只有错误答案",
+      "question": "计算 5/6 - 1/4。",
+      "level": "小学",
+      "student_work": "1/2",
+      "work_kind": "answer_only",
+      "expected_behavior": "说明答案不符但不编造计算过程；comparisons 和 diagnosis 为空，请学生补充步骤。",
+      "human_reference": "10/12 - 3/12 = 7/12。",
+      "correction": null
+    },
+    {
+      "id": "equation-equivalent",
+      "title": "一元一次方程：先除后加的等价解法",
+      "question": "解方程 5x - 4 = 16。",
+      "level": "初中",
+      "student_work": "(5x - 4)/5 = 16/5\nx - 4/5 = 16/5\nx = 20/5 = 4",
+      "work_kind": "steps",
+      "expected_behavior": "认可先把两边除以 5 的合法方法，不因与参考顺序不同而判错。",
+      "human_reference": "x = 4。可以先加 4 再除以 5，也可以先除以 5。",
+      "correction": {
+        "student_work": "5x = 16 + 4 = 20\nx = 4",
+        "work_kind": "steps",
+        "expected_behavior": "前后两种方法都正确；变化不能被描述为纠正了原本不存在的错误。",
+        "human_reference": "x = 4；方法改变，不代表能力提高。"
+      }
+    },
+    {
+      "id": "equation-missing-condition",
+      "title": "方程情境：条件不足",
+      "question": "一个数增加某个数后等于 18，求原来的数。",
+      "level": "初中",
+      "student_work": "",
+      "work_kind": "none",
+      "expected_behavior": "询问增加了多少；needs_clarification，不能编造唯一答案或学生错误。",
+      "human_reference": "条件不足。若增加 a，则原数为 18-a，a 未给定。",
+      "correction": null
+    }
+  ]
+}
