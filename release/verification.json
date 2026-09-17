@@ -18,28 +18,28 @@
   "learning_outcomes": "not_measured",
   "github_ci": "See GitHub Actions for the public commit; this file records local verification.",
   "latest_offline_verification": {
-    "checked_at": "2026-09-17T17:25:43.168176+00:00",
-    "scope": "Opt-in bounded read-only agent loop in capture and correction UI",
-    "application_tests_passed": 499,
-    "elapsed_seconds": 62.771,
-    "test_location": "clean allowlisted source export",
-    "working_tree_full_suite_before_last_audit_guard": {
-      "tests_passed": 498,
-      "elapsed_seconds": 66.727
-    },
-    "final_audit_reservation_guard_targeted_tests_passed": 1,
-    "new_tests": 42,
+    "checked_at": "2026-09-17T17:43:57.300068+00:00",
+    "scope": "Frozen five-scenario tool-selection plan and counted Agent validation runner",
+    "application_tests_passed": 521,
+    "elapsed_seconds": 73.159,
+    "test_location": "repository working tree",
+    "new_tests": 22,
+    "agent_targeted_tests_passed": 64,
+    "agent_targeted_elapsed_seconds": 16.729,
     "real_api_calls": 0,
-    "exported_files": 142,
-    "local_http_demo_scenarios": 7,
-    "local_http_demo_requests": 10,
+    "exported_files": 146,
+    "local_http_demo_scenarios": 5,
+    "local_http_demo_requests": 8,
+    "local_http_demo_completed": 4,
+    "local_http_demo_intentional_failures": 1,
     "protected_existing_private_files_checked": 24,
     "protected_existing_private_files_changed": 0,
-    "live_tool_selection": "not_run",
-    "current_prompt_live_validation": "not_run",
+    "live_tool_selection": "pending_separate_user_budget_approval",
     "human_quality_scores": null,
     "repository_visibility": "private",
-    "pull_request_state": "draft_not_merged"
+    "pull_request_state": "draft_not_merged",
+    "exported_source_targeted_tests_passed": 64,
+    "exported_source_targeted_elapsed_seconds": 16.327
   },
   "latest_synthetic_ocr_verification": {
     "checked_at": "2026-09-17T09:28:18.010895+00:00",
@@ -123,5 +123,29 @@
     "historical_records_readable": true,
     "new_prompt_live_validation": "not_run",
     "human_quality_scores": null
+  },
+  "agent_loop_offline_verification": {
+    "checked_at": "2026-09-17T17:25:43.168176+00:00",
+    "scope": "Opt-in bounded read-only agent loop in capture and correction UI",
+    "application_tests_passed": 499,
+    "elapsed_seconds": 62.771,
+    "test_location": "clean allowlisted source export",
+    "working_tree_full_suite_before_last_audit_guard": {
+      "tests_passed": 498,
+      "elapsed_seconds": 66.727
+    },
+    "final_audit_reservation_guard_targeted_tests_passed": 1,
+    "new_tests": 42,
+    "real_api_calls": 0,
+    "exported_files": 142,
+    "local_http_demo_scenarios": 7,
+    "local_http_demo_requests": 10,
+    "protected_existing_private_files_checked": 24,
+    "protected_existing_private_files_changed": 0,
+    "live_tool_selection": "not_run",
+    "current_prompt_live_validation": "not_run",
+    "human_quality_scores": null,
+    "repository_visibility": "private",
+    "pull_request_state": "draft_not_merged"
   }
 }

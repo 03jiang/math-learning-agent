@@ -14,6 +14,7 @@
     "demo_reading.py",
     "demo_settings.py",
     "demo_steps.py",
+    "docs/AGENT_LIVE.md",
     "docs/AGENT_LOOP.md",
     "docs/ANALYSIS_EVIDENCE.md",
     "docs/ARCHITECTURE.md",
@@ -82,6 +83,7 @@
     "study/__init__.py",
     "study/agent.py",
     "study/agent_audit.py",
+    "study/agent_live.py",
     "study/agent_protocol.py",
     "study/agent_tools.py",
     "study/agent_ui.py",
@@ -107,6 +109,7 @@
     "study/transcription.py",
     "study/ui.py",
     "teaching_guard.py",
+    "test_agent_live.py",
     "test_analysis_evidence.py",
     "test_app.py",
     "test_chat_api.py",
@@ -140,6 +143,7 @@
     "tools/launch_demo.py",
     "tools/public_files.json",
     "tools/revalidate_correction.py",
+    "tools/verify_agent_live.py",
     "tools/verify_study_live.py",
     "workflow.py"
   ]

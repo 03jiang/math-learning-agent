@@ -55,6 +55,7 @@ python -m study.launch --demo
 - [五分钟演示脚本](docs/DEMO.md)
 - [系统边界、状态与失败处理](docs/ARCHITECTURE.md)
 - [工具循环、零密钥演练与关键代码](docs/AGENT_LOOP.md)
+- [五场景真实联调计划与预算边界](docs/AGENT_LIVE.md)
 - [实际验证、证据分级与待办](docs/STATUS.md)
 - [简历条目与面试准备](portfolio/APPLICATION_PACK.md)
 
