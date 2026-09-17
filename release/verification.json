@@ -28,5 +28,30 @@
     "real_api_calls": 0,
     "original_ocr_quality": "not_evaluated",
     "handwritten_phone_photo_quality": "not_verified"
+  },
+  "latest_synthetic_ocr_verification": {
+    "checked_at": "2026-09-17T09:28:18.010895+00:00",
+    "source_commit": "30633efb0280e0f69689f8f367300e041fa6ed09",
+    "mode": "real_api",
+    "scope": "Two synthetic images, transcription only",
+    "case_ids": [
+      "p01_fraction_steps",
+      "q10_teacher_annotation"
+    ],
+    "real_api_calls": 2,
+    "reply_valid": 2,
+    "failed": 0,
+    "input_tokens": 2180,
+    "output_tokens": 107,
+    "total_tokens": 2287,
+    "elapsed_ms_total": 3078.3,
+    "actual_cost_cny": null,
+    "assistant_reference_and_visual_check": "question, original student work and work kind match both synthetic sources",
+    "human_scores": null,
+    "model_analysis_calls": 0,
+    "notebook_saves": 0,
+    "real_handwritten_photos": "not_verified",
+    "completed_plan_additional_calls": 0,
+    "original_reports_unchanged": true
   }
 }
