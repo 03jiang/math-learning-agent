@@ -145,6 +145,13 @@
     "tools/revalidate_correction.py",
     "tools/verify_agent_live.py",
     "tools/verify_study_live.py",
-    "workflow.py"
+    "workflow.py",
+    "study/preferences.py",
+    "study/context.py",
+    "study/context_ui.py",
+    "tools/demo_study_context.py",
+    "test_study_context.py",
+    "test_study_context_ui.py",
+    "docs/CONTEXT.md"
   ]
 }

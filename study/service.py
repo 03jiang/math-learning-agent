@@ -141,6 +141,8 @@ def correction_context(entry, answer, *, work_kind):
 
 def build_payload(config, instructions, context, image=None, work_image=None, *,
                   output_mode='json_object', operation='analyze'):
+    from study.context import INSTRUCTIONS as CONTEXT_INSTRUCTIONS, check_payload
+    if 'learning' in context:instructions+=CONTEXT_INSTRUCTIONS
     endpoint(config, output_mode)  # 包括发送前的模式/思考设置检查。
     photos=[(role,photo) for role,photo in (('question',image),('student_work',work_image)) if photo is not None]
     context={**context,'attached_images':[{'position':index,'role':role} for index,(role,_) in enumerate(photos,1)]}
@@ -151,7 +153,9 @@ def build_payload(config, instructions, context, image=None, work_image=None, *,
     payload = {'model':config.model,'messages':[{'role':'system','content':instructions},{'role':'user','content':content}],
         'response_format':{'type':'json_object'},'max_tokens':config.max_output_tokens,
         'temperature':config.temperature,'thinking':{'type':config.thinking},'stream':False}
-    return strict_payload(payload, operation, context=context) if output_mode=='strict_tool' else payload
+    payload=strict_payload(payload, operation, context=context) if output_mode=='strict_tool' else payload
+    check_payload(payload)
+    return payload
 
 
 class PhotoTransport:
@@ -209,13 +213,18 @@ class StudyService:
                               output_mode=self.output_mode,operation=operation)
         record={'operation':operation,'kind':self.transport.kind,
             'contract':(CORRECTION_PROMPT_VERSION if operation=='reanalyze' else
-                        ANALYSIS_PROMPT_VERSION if operation=='analyze' else 'photo-study-v3'),'attempted_requests':0,
+                        ANALYSIS_PROMPT_VERSION if operation=='analyze' else
+                        'study-coaching-v1' if operation=='coach' else 'photo-study-v3'),'attempted_requests':0,
             'http_status':None,'usage':None,'status':'running','completion_unknown':False,'error_code':None,
             'request_hash':hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
             'prompt_sha256':hashlib.sha256(instructions.encode()).hexdigest(),
             'requested_model':self.config.model}
         record.update(output_mode=self.output_mode,request_endpoint=self.transport.endpoint,
                       output_contract=CONTRACT_VERSION if self.output_mode=='strict_tool' else 'json-object-v1')
+        if 'learning' in context:
+            from study.context import VERSION,check_payload
+            record.update(context_contract=VERSION,request_text_bytes=check_payload(payload),
+                          omitted_dialogue=context['context_budget']['omitted_dialogue'])
         if operation != 'recognize': record['evidence_contract'] = EVIDENCE_VERSION
         record['prompt_sha256']=hashlib.sha256(payload['messages'][0]['content'].encode()).hexdigest()
         self.calls.append(record)
@@ -236,6 +245,9 @@ class StudyService:
             elif operation=='reanalyze':
                 validate_result(value,previous_work=context['previous_student_work'],
                     previous_analysis=context['previous_analysis'],answer=context['student_work'],work_kind=context['student_work_kind'])
+            elif operation=='coach':
+                from study.context import validate_coach
+                validate_coach(value)
             else: validate_analysis(value,student_work=context['student_work'],work_kind=context['student_work_kind'])
             record['status']='ok'
             return value
@@ -259,10 +271,20 @@ class StudyService:
         return self.call('recognize',OCR_PROMPT,{'task':'请分开转录题目与学生原作答。',
                                                'provided_question':question_text},image,work_image)
 
-    def analyze(self,question,level,my_work='',image=None,*,work_kind=None,work_image=None):
+    def analyze(self,question,level,my_work='',image=None,*,work_kind=None,work_image=None,learning=None):
+        from study.context import attach
         return self.call('analyze',ANALYSIS_PROMPT,
-            analysis_context(question,level,my_work,work_kind=work_kind),image,work_image)
+            attach(analysis_context(question,level,my_work,work_kind=work_kind),learning),image,work_image)
 
-    def reanalyze(self,entry,answer,*,work_kind):
-        return self.call('reanalyze',CORRECTION_PROMPT,correction_context(entry,answer,work_kind=work_kind),
+    def reanalyze(self,entry,answer,*,work_kind,learning=None):
+        from study.context import attach
+        return self.call('reanalyze',CORRECTION_PROMPT,attach(correction_context(entry,answer,work_kind=work_kind),learning),
                          entry['image'],entry.get('work_image'))
+
+    def coach(self,question,level,my_work='',image=None,*,work_kind=None,work_image=None,learning,previous_entry=None):
+        from study.context import attach, COACH_PROMPT
+        context=analysis_context(question,level,my_work,work_kind=work_kind)
+        if previous_entry is not None:
+            if previous_entry['question']!=question or previous_entry['level']!=level:raise ValueError('前后题目不一致。')
+            context=correction_context(previous_entry,my_work,work_kind=work_kind)
+        return self.call('coach',COACH_PROMPT,attach(context,learning),image,work_image)

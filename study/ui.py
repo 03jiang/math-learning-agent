@@ -18,6 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def reset_draft():
+    st.session_state.pop('study_context_active',None)
     for key in list(st.session_state):
         if key.startswith('photo_') and key not in ('photo_api_key','photo_model'):
             del st.session_state[key]
@@ -211,16 +212,24 @@ def render_capture(notebook):
         st.caption('核对范围包括题干、图形、原作答及作答类型。修改任一作答内容后需要重新勾选。')
         confirmed=st.checkbox('题干与图形条件已核对',key='photo_confirmed')
         current=fingerprint(question,level,my_work,image,work_kind,work_image=work_image)
-        from study import agent_ui
+        from study import agent_ui,context_ui
         current+=agent_ui.signature(notebook)
-        key='analysis-v4-'+entry_id+'-'+current+'-'+st.session_state.get('photo_model','')
+        options=context_ui.options(notebook,'capture-'+entry_id,current)
+        from study.run_audit import digest
+        current+=digest(options['settings'])
+        base='analysis-v5-'+entry_id+'-'+current+'-'+st.session_state.get('photo_model','')
+        key=context_ui.analysis_key(options,base)
         if st.button('分析这道题',type='primary',disabled=not(question.strip() and confirmed)):
             try:
+                extra={} if demo_enabled() else {'learning':context_ui.learning(options)}
                 with st.spinner('正在分析思路与解题步骤…'):
                     packet=run_once(key,lambda:agent_ui.perform(notebook,key,'analyze',question,level,my_work,image,
-                                                              work_kind=work_kind,work_image=work_image))
+                                                              work_kind=work_kind,work_image=work_image,**extra))
                 st.session_state.photo_analysis={'fingerprint':current,'value':packet['value'],
-                                                'agent_run':packet['agent_run'],'origin':reply_origin()}
+                                                'agent_run':packet['agent_run'],'origin':reply_origin(),'request_key':key,
+                                                'created_at':packet['created_at']}
+                context_ui.analyzed(options,base,key,packet['value'],reply_origin())
+                st.rerun()
             except (ValueError,OSError) as exc: st.error(str(exc))
         agent_ui.show_trace(notebook,key)
         st.caption('当前只回放人工编写的固定示例，不发送图片或文字。' if demo_enabled() else
@@ -231,9 +240,12 @@ def render_capture(notebook):
         active=stored if stored and stored['fingerprint']==current else None
         if stored and not active: st.info('题目或作答已修改，原分析不再用于本次收藏，请重新分析。')
         if active:
+            context_ui.seed_analysis(options,active,active['value'])
             st.success('已分析 · 可以对照步骤整理错因')
             show_analysis(active['value'],example=active['origin']==DEMO_ORIGIN)
-            st.button('放弃这次分析',on_click=agent_ui.discard_candidate,args=(notebook,active,key))
+            st.button('放弃这次分析',on_click=agent_ui.discard_candidate,args=(notebook,active,active['request_key']))
+        context_ui.render_coach(notebook,options,question,level,my_work,image,kind=work_kind,
+            work_image=work_image,confirmed=bool(question.strip() and confirmed))
         if st.session_state.get('study_agent_action_error'):
             st.error(st.session_state.pop('study_agent_action_error'))
         failed=[key for key,value in st.session_state.photo_calls.items() if 'error' in value]
@@ -304,6 +316,8 @@ def render_notebook(notebook,entries):
     revision=f"{entry['id']}-{entry['version']}"
     from study.correction_ui import render as render_correction
     render_correction(notebook,entry)
+    from study.context_ui import history_controls
+    history_controls(notebook,entry)
     with st.expander('整理错因与订正',expanded=True):
         with st.form('edit-'+revision):
             topic=st.text_input('知识点',entry['topic'],max_chars=80)
@@ -422,6 +436,10 @@ def render(directory,view):
         st.title('🌱 数学学习工作台')
         st.caption('小学 · 初中 · 高中\n\n自己的题目，自己的复习记录。')
         st.metric('已收藏',len(entries))
+        from study import context_ui
+        try:context_ui.sidebar(notebook)
+        except (ValueError,OSError) as exc:
+            st.error(str(exc));return
         with st.expander('连接 DeepSeek',expanded=False):
             offline=os.environ.get('MATH_PHOTO_OFFLINE')=='1' or demo_enabled()
             st.text_input('DeepSeek API 密钥',type='password',key='photo_api_key',disabled=offline)
@@ -441,3 +459,8 @@ def render(directory,view):
     if view=='拍照解题': render_capture(notebook)
     elif view=='错题本': render_notebook(notebook,entries)
     else: render_summary(entries)
+    task=st.session_state.get('study_context_active')
+    if task and view in ('拍照解题','错题本'):
+        with st.sidebar:
+            st.caption('本题待做：'+(task['selected_next_step'] or '尚未选择下一步'))
+            st.caption('选择下一步不表示已完成；本题追问仅在当前会话保留。')

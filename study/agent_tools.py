@@ -8,10 +8,18 @@ import json
 import re
 import stat
 import subprocess
+from datetime import datetime, timezone, timedelta
 
 from retrieval import search_notes, _terms, NOTES_DIR
 from study.agent_protocol import AgentError
 from study.notebook import Notebook
+from study.preferences import history_rules
+
+HISTORY_MAX_DAYS=180
+
+
+def history_cutoff():
+    return datetime.now(timezone.utc).date()-timedelta(days=HISTORY_MAX_DAYS)
 
 
 def definitions(history_enabled=False):
@@ -59,11 +67,17 @@ def revision(directory, maximum):
 
 
 def history_sources(directory, topic, limit, exclude_id=None):
-    book=Notebook(directory); query=_terms(topic); found=[]
+    book=Notebook(directory); query=_terms(topic)-{'计算','题目','以前','请问','记录','过程','解题','这道','帮我','分析'}; found=[]
+    rules=history_rules(directory)
     for path in files_in(directory,200):
         entry=book.get(path.stem)
         if entry.get('archived_at') or entry['id']==exclude_id: continue
-        score=len(query & _terms(entry['topic']+' '+entry['question']))
+        rule=rules.get(entry['id'],{'enabled':True,'include_model':True})
+        if not rule['enabled']:continue
+        if datetime.fromisoformat(entry['updated_at']).date()<history_cutoff():continue
+        topic_hits=query & _terms(entry['topic']);question_hits=query & _terms(entry['question'])
+        score=3*len(topic_hits)+len(question_hits)
+        if not topic_hits and len(question_hits)<2:continue
         if not score: continue
         latest=entry.get('corrections',[])
         model=latest[-1]['result']['analysis'] if latest else entry['analysis']
@@ -71,12 +85,14 @@ def history_sources(directory, topic, limit, exclude_id=None):
         # 当前题目不截断；这里仅传相关历史摘录，明确标记节选与来源类型。
         lines=['历史题目节选：'+entry['question'][:240], '用户原作答节选：'+entry['my_work'][:400]]
         if latest: lines.append('用户最近订正节选：'+latest[-1]['answer'][:400])
-        if model: lines.append('旧模型分析节选（未核对）：'+model['summary'][:240])
+        if model and rule['include_model']: lines.append('旧模型分析节选（未核对）：'+model['summary'][:240])
+        if entry['correction']:lines.append('用户订正笔记节选（自述，优先复核冲突）：'+entry['correction'][:240])
         reviews=entry.get('reviews',[])
         if reviews: lines.append('最近用户自评（不代表掌握）：'+reviews[-1]['outcome'])
         source={'source_id':'history:'+entry['id'],'kind':'review_history','title':entry['topic'],
                 'record_id':entry['id'],'saved_at':entry['created_at'],'updated_at':entry['updated_at'],
-                'model_origin':origin[:100],'snippet':'\n'.join(lines),'is_excerpt':True}
+                'model_origin':origin[:100] if rule['include_model'] else '旧模型分析已停用',
+                'snippet':'\n'.join(lines),'is_excerpt':True}
         found.append((score,entry['updated_at'],entry['id'],source))
     return [row[3] for row in sorted(found,key=lambda r:(r[0],r[1],r[2]),reverse=True)[:limit]]
 
@@ -107,6 +123,8 @@ class ToolScope:
     def signature(self):
         return {'notes':revision(self.notes_dir,32),'history_enabled':self.history_enabled,
                 'history':revision(self.history_dir,200) if self.history_enabled else None,
+                'history_rules':history_rules(self.history_dir) if self.history_enabled else None,
+                'history_cutoff':str(history_cutoff()) if self.history_enabled else None,
                 'exclude_id':self.exclude_id}
 
     def call(self, name, arguments, timeout):

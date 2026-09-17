@@ -8,6 +8,8 @@
 
 **这是有人参与确认的 AI 学习工作流，默认单次分析，可选有限只读工具循环。** Python / Streamlit / DeepSeek Chat Completions / JSON。使用 Codex 辅助开发；工程验证与教学效果分开陈述。
 
+主页面的三项学习设置、本轮要求、同题追问和历史使用范围：见 [上下文与设置说明](docs/CONTEXT.md)。当前为离线程序验证，未验证新增追问的真实教学效果。
+
 ## 三分钟了解
 
 1. 上传题目照片，可另外上传作答照片；支持旋转、裁剪和直接输入文字。
@@ -39,6 +41,7 @@ flowchart LR
 ```bash
 git clone https://github.com/03jiang/math-learning-agent.git
 cd math-learning-agent
+git switch feat/study-smoke-audit  # 当前新增能力位于草稿 PR 分支
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-lock.txt
@@ -55,6 +58,7 @@ python -m study.launch --demo
 - [五分钟演示脚本](docs/DEMO.md)
 - [系统边界、状态与失败处理](docs/ARCHITECTURE.md)
 - [工具循环、零密钥演练与关键代码](docs/AGENT_LOOP.md)
+- [学习设置、同题追问与上下文预算](docs/CONTEXT.md)
 - [五场景真实联调计划与预算边界](docs/AGENT_LIVE.md)
 - [实际验证、证据分级与待办](docs/STATUS.md)
 - [简历条目与面试准备](portfolio/APPLICATION_PACK.md)

@@ -69,9 +69,26 @@ def search_notes(query, *, notes_dir=NOTES_DIR, deadline=float('inf')):
         score = 3 * len(query_terms & title) + 2 * len(query_terms & tags) + len(query_terms & body)
         if score:
             matches.append({'source_id': note['source_id'], 'title': note['title'],
-                            'snippet': note['body'][:360], 'score': score})
+                            'snippet': relevant_snippet(note['body'],query_terms), 'score': score})
     check_deadline(deadline)
     return sorted(matches, key=lambda x: (-x['score'], x['source_id']))[:3]
+
+
+def relevant_snippet(body,query_terms):
+    """短笔记原样返回；长笔记优先取命中词的句段，仍是标明来源的节选。"""
+    if len(body)<=360:return body
+    pieces=re.split(r'(?<=[。！？!?\n])',body)
+    scores=[len(query_terms & _terms(piece)) for piece in pieces]
+    start=max(range(len(pieces)),key=lambda i:scores[i])
+    selected=pieces[start]
+    for following in pieces[start+1:]:
+        if len(selected)+len(following)>360:break
+        selected+=following
+    if len(selected)<=360:return selected
+    # 参考笔记允许节选，当前题目与作答不走此函数。
+    positions=[selected.casefold().find(term) for term in query_terms]
+    hit=min((p for p in positions if p>=0),default=0)
+    return selected[max(0,hit-80):max(0,hit-80)+360]
 
 
 class ToolBudget:

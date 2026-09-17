@@ -11,7 +11,7 @@ from study.evidence import ANSWER_ONLY_FEEDBACK
 OUTPUT_MODES = ('json_object', 'strict_tool')
 STRICT_ENDPOINT = 'https://api.deepseek.com/beta/chat/completions'
 CONTRACT_VERSION = 'study-strict-output-v3'
-FUNCTIONS = {'analyze': 'return_math_analysis', 'reanalyze': 'return_math_correction',
+FUNCTIONS = {'analyze': 'return_math_analysis', 'reanalyze': 'return_math_correction', 'coach':'return_math_coaching',
              'recognize': 'return_math_transcription'}
 ISSUES = {
     'duplicate_json_key': '模型回复包含重复 JSON 字段，即使值相同也不自动合并。',
@@ -99,6 +99,9 @@ def correction_change_schema(context):
 
 
 def output_schema(operation, *, context=None):
+    if operation=='coach':
+        return obj({'schema_version':{'type':'integer','enum':[1]},'status':string(('explained','needs_clarification')),
+                    'reply':string(),'next_step':string(),'clarification':string()})
     # Beta 使用官方列出的基础类型、enum 与 anyOf。新步骤语义仍由应用检查。
     if operation == 'recognize':
         return obj({'text': string(), 'student_work': string(),

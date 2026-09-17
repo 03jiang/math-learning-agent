@@ -6,6 +6,7 @@
 |---|---|---|
 | 图片 | `study/images.py`、`study/photo_ui.py` | 单张 ≤8 MB，规范化与哈希；预览、应用和保存分开 |
 | 模型 | `study/service.py`、`study/http_worker.py` | 文本与角色标注的双图，请求体 ≤12 MB，总超时、无自动重试 |
+| 教学上下文 | `study/context.py`、`study/preferences.py`、`study/context_ui.py` | 三项确认设置、本轮覆盖、同题四轮对话、字节预算；选择下一步不等于完成 |
 | 工具循环 | `study/agent.py`、`study/agent_tools.py` | 可选两个只读工具，≤3 次工具执行、≤4 次模型请求，独立超时与来源检查 |
 | 校验 | `study/diagnosis.py`、`study/corrections.py` | 严格 JSON、原文引用、作答类型和可推断范围一致 |
 | 确认 | `study/ui.py`、`study/correction_ui.py` | 可确认或放弃；输入或存档版本改变使旧预览失效 |
@@ -19,3 +20,5 @@
 普通存档为 `data/study/notebook/`，演示为 `data/demo-study/notebook/`。密钥来自用户明确输入的会话或启动环境，不写存档。点击模型按钮才发送本题内容；订正还携带此前最近的作答与分析。启用资料辅助后，工具结果会在后续回合发送，历史查询另需打开会话开关。公开导出排除密钥、用户照片、存档、原始调用报告和本地 Git 历史。
 
 采用 POSIX `fcntl`，面向单机单用户；不是云端多租户或分布式事务系统。Windows、手机访问与在线部署不在本版验收范围。
+
+设置与历史使用范围分别保存为本机 JSON；浏览器中的追问与待做任务不持久化。历史默认关闭，逐题可停用旧模型意见；回收站、停用及超过 180 天未更新的历史不进入工具结果，权限和来源变化使相关缓存失效。详见 [设置与上下文](CONTEXT.md)。

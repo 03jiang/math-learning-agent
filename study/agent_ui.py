@@ -4,7 +4,7 @@ import streamlit as st
 from study.agent_tools import ToolScope
 from study.agent_audit import AgentAudit, assert_candidate, record_decision
 from study.agent_protocol import VERSION
-from study.run_audit import digest
+from study.run_audit import digest,stamp
 from study.demo_service import enabled as demo_enabled
 
 
@@ -33,14 +33,14 @@ def perform(notebook, request_key, method, *args, **kwargs):
     tutor=service()
     if enabled():
         from study.agent import AgentStudyService
-        excluded=args[0]['id'] if method=='reanalyze' else None
+        excluded=args[0]['id'] if method=='reanalyze' else (kwargs.get('previous_entry') or {}).get('id')
         transport=tutor.transport if (tutor.transport.kind=='local_http_test' or
             tutor.transport.endpoint==tutor.config.base_url+'/chat/completions') else None
         tutor=AgentStudyService(tutor.config,tutor.key,transport=transport,scope=scope(notebook,excluded),
                                 audit_dir=audit(notebook).directory)
     try:
         value=getattr(tutor,method)(*args,**kwargs)
-        return {'value':value,'agent_run':tutor.run_id if enabled() else None}
+        return {'value':value,'agent_run':tutor.run_id if enabled() else None,'created_at':stamp()}
     finally:
         if enabled() and getattr(tutor,'last_run',None):
             st.session_state.study_agent_last_run={'request_key':request_key,'run_id':tutor.run_id}
@@ -74,6 +74,7 @@ def discard_candidate(notebook, active, request_key, entry_id=None):
         else:
             st.session_state.photo_analysis=None
             st.session_state.photo_calls[request_key]={'error':'本次分析已放弃；如需重新请求，请先手动清除记录。'}
+        st.session_state.pop('study_context_active',None)
     except (OSError,ValueError) as exc:
         st.session_state.study_agent_action_error=str(exc)
 
