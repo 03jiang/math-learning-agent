@@ -36,6 +36,9 @@ def new_solution(kind='none'):
     result=deepcopy(ANALYSIS)
     result['student_review']={'work_kind':kind,'verdict':'not_provided' if kind=='none' else 'uncertain',
         'observed_approach':'','answer_feedback':'' if kind=='none' else '请补充作答过程。','comparisons':[]}
+    if kind == 'answer_only':
+        from study.evidence import ANSWER_ONLY_FEEDBACK
+        result['student_review']['answer_feedback'] = ANSWER_ONLY_FEEDBACK['uncertain']
     result['diagnosis']=[]
     return result
 

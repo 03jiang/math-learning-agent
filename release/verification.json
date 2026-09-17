@@ -18,17 +18,21 @@
   "learning_outcomes": "not_measured",
   "github_ci": "See GitHub Actions for the public commit; this file records local verification.",
   "latest_offline_verification": {
-    "checked_at": "2026-09-17T09:45:02.908230+00:00",
-    "scope": "Reuse actual OCR in confirmed photo-analysis inputs, then accept/reject and restore schema 4",
-    "application_tests_passed": 437,
-    "elapsed_seconds": 53.691,
-    "new_tests": 17,
+    "checked_at": "2026-09-17T16:58:15.943322+00:00",
+    "scope": "Bound answer-only feedback and verify supported numeric steps at generation and new-save boundaries",
+    "application_tests_passed": 457,
+    "elapsed_seconds": 55.33,
+    "new_tests": 20,
     "real_api_calls": 0,
-    "local_simulation": "2 OCR plus 2 analysis HTTP handwritten replies; confirm inputs, reject one, save one and reopen",
-    "photo_analysis_with_real_api": "pending_user_input_and_budget_confirmation",
-    "human_quality_scores": null,
-    "exported_source_targeted_tests_passed": 17,
-    "exported_source_targeted_elapsed_seconds": 5.262
+    "known_real_replies_rechecked_offline": 2,
+    "known_issues_now_rejected": [
+      "step_quote_incomplete",
+      "answer_only_feedback_not_bounded"
+    ],
+    "original_reports_unchanged": true,
+    "historical_records_readable": true,
+    "new_prompt_live_validation": "not_run",
+    "human_quality_scores": null
   },
   "latest_synthetic_ocr_verification": {
     "checked_at": "2026-09-17T09:28:18.010895+00:00",
@@ -66,5 +70,34 @@
     "real_api_calls": 0,
     "original_ocr_quality": "not_evaluated",
     "handwritten_phone_photo_quality": "not_verified"
+  },
+  "photo_analysis_flow_offline_verification": {
+    "checked_at": "2026-09-17T09:45:02.908230+00:00",
+    "scope": "Reuse actual OCR in confirmed photo-analysis inputs, then accept/reject and restore schema 4",
+    "application_tests_passed": 437,
+    "elapsed_seconds": 53.691,
+    "new_tests": 17,
+    "real_api_calls": 0,
+    "local_simulation": "2 OCR plus 2 analysis HTTP handwritten replies; confirm inputs, reject one, save one and reopen",
+    "photo_analysis_with_real_api": "pending_user_input_and_budget_confirmation",
+    "human_quality_scores": null,
+    "exported_source_targeted_tests_passed": 17,
+    "exported_source_targeted_elapsed_seconds": 5.262
+  },
+  "latest_synthetic_photo_analysis_verification": {
+    "source_commit": "8438be23303fcac2abe0e8aac4657c0558d2e8d6",
+    "real_api_calls": 2,
+    "original_reply_valid": 2,
+    "http_200": 2,
+    "input_tokens": 6363,
+    "output_tokens": 1254,
+    "total_tokens": 7617,
+    "elapsed_ms_total": 6362.08,
+    "actual_cost_cny": null,
+    "content_review": "assistant found local-step misattribution and unsupported inference in answer feedback; not fully accepted",
+    "notebook_saves": 0,
+    "notebook_rejections": 0,
+    "human_quality_scores": null,
+    "new_model_calls_for_offline_recheck": 0
   }
 }

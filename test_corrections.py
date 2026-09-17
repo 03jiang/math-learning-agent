@@ -10,6 +10,7 @@ from uuid import uuid4
 from streamlit.testing.v1 import AppTest
 from http_test_support import LocalModelServer
 from model_api import load_model_config
+from study.evidence import ANSWER_ONLY_FEEDBACK
 from study.corrections import baseline, fingerprint, validate_result
 from study.example import QUESTION, STUDENT_WORK, ANALYSIS, corrected_example
 from study.notebook import Notebook, make_entry, summarize, learning_groups
@@ -48,7 +49,7 @@ class CorrectionProtocolTests(unittest.TestCase):
     def test_answer_only_cannot_claim_a_step_was_corrected(self):
         _,result=corrected_example()
         result['analysis']=fixtures.new_solution('answer_only')
-        result['analysis']['student_review'].update(verdict='correct',answer_feedback='x = 4 代入成立。')
+        result['analysis']['student_review'].update(verdict='correct',answer_feedback=ANSWER_ONLY_FEEDBACK['correct'])
         with self.assertRaises(ValueError): self.check(result,answer='x = 4')
         result['comparison']['changes']=[]
         result['comparison']['summary']='本次答案正确，但没有过程，无法确认原步骤是否已订正。'
@@ -156,7 +157,7 @@ class CorrectionHTTPTests(unittest.TestCase):
             self.assertEqual(answer,context['student_work'])
             self.assertEqual(ANALYSIS,context['previous_analysis'])
             self.assertNotIn('reviews',context);self.assertNotIn('operation_ids',context)
-            self.assertEqual('photo-correction-v5',tutor.calls[0]['contract'])
+            self.assertEqual('photo-correction-v6',tutor.calls[0]['contract'])
 
     def test_invalid_comparison_has_no_retry_and_empty_work_never_sends(self):
         answer,result=corrected_example();result['comparison']['changes'][0]['previous_excerpt']='unseen work'

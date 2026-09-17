@@ -325,14 +325,17 @@ class CorrectionEvidenceTests(unittest.TestCase):
         self.assertEqual(before, value)
 
     def test_combined_current_steps_reject_mixed_or_uncertain_verdicts(self):
+        from study.diagnosis import AnalysisValidationError
         for verdict in ('incorrect','uncertain'):
             value = deepcopy(self.result)
             value['comparison']['changes'][0]['current_excerpt'] = self.context['student_work']
             value['analysis']['student_review']['comparisons'][0]['verdict'] = verdict
             value['analysis']['student_review']['verdict'] = 'partial' if verdict=='incorrect' else 'uncertain'
-            with self.subTest(verdict=verdict), self.assertRaises(CorrectionValidationError) as caught:
+            error_type=AnalysisValidationError if verdict=='incorrect' else CorrectionValidationError
+            with self.subTest(verdict=verdict), self.assertRaises(error_type) as caught:
                 self.validate(value)
-            self.assertEqual('correction_current_verdict_mismatch', caught.exception.code)
+            expected='step_arithmetic_verdict_mismatch' if verdict=='incorrect' else 'correction_current_verdict_mismatch'
+            self.assertEqual(expected, caught.exception.code)
 
     def test_combined_current_quote_cannot_include_unreviewed_content(self):
         value = deepcopy(self.result)
@@ -368,11 +371,16 @@ class CorrectionEvidenceTests(unittest.TestCase):
 
     def test_multi_step_still_incorrect_requires_all_referenced_steps_incorrect(self):
         value = deepcopy(self.result)
+        # 使用确实不成立的数值等式，不再把正确算式随意贴错标签。
+        self.context['student_work']='2/3 = 5/6\n5/6 + 1/6 = 5/6'
+        for step,quote in zip(value['analysis']['student_review']['comparisons'],self.context['student_work'].splitlines()):
+            step.update(student_excerpt=quote,verdict='incorrect')
         value['comparison']['changes'][0].update(current_excerpt=self.context['student_work'],status='still_incorrect')
         value['analysis']['student_review']['verdict'] = 'incorrect'
-        for step in value['analysis']['student_review']['comparisons']: step['verdict']='incorrect'
-        self.assertEqual(value,self.validate(value))  # 标签检查；手写内容不是数学评分。
-        value['analysis']['student_review']['comparisons'][0]['verdict']='correct'
+        self.assertEqual(value,self.validate(value))
+        self.context['student_work']='2/3 = 4/6\n5/6 + 1/6 = 5/6'
+        value['analysis']['student_review']['comparisons'][0].update(student_excerpt='2/3 = 4/6',verdict='correct')
+        value['comparison']['changes'][0]['current_excerpt']=self.context['student_work']
         with self.assertRaises(CorrectionValidationError): self.validate(value)
 
     def test_no_previous_wrong_steps_has_no_corrected_branch_or_empty_enum(self):

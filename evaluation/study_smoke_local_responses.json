@@ -99,7 +99,7 @@
         "work_kind": "answer_only",
         "verdict": "incorrect",
         "observed_approach": "",
-        "answer_feedback": "1/2 = 6/12，与 7/12 不同；请补充计算步骤，不能只凭答案判断哪里算错。",
+        "answer_feedback": "当前答案与参考答案不符；仅有答案，不能判断计算过程，请补充步骤。",
         "comparisons": []
       },
       "knowledge_points": [

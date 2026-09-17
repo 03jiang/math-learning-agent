@@ -1,5 +1,6 @@
 """作答诊断 v2：引用可追溯到已核对作答；旧分析只供存档兼容读取。"""
 from study.notebook import REASONS, text
+from study.evidence import evidence_issue
 
 WORK_KINDS = {'none':'未提供作答', 'answer_only':'只有最终答案', 'steps':'有解题过程', 'unclear':'暂不确定 / 字迹不清'}
 LEGACY_FIELDS = {'status','topic','summary','steps','answer','error_analysis','next_practice','clarification'}
@@ -12,6 +13,11 @@ VALIDATION_ISSUES = {
     'student_review_fields': 'student_review 字段不完整或包含未知字段；diagnosis 应在分析顶层。',
     'incorrect_without_evidence': '判定步骤有误却未提供可核对的错误步骤。',
     'partial_without_support': '未发现错误步骤时，部分完成必须说明遗漏，并且已给步骤全部正确。',
+    'answer_only_feedback_not_bounded': '仅有答案时，反馈须按判断使用规定的结果对照语句，不能扩写计算方法。',
+    'answer_only_method_claim': '仅有答案却在讲解中断言学生计算方法，证据不足。',
+    'step_quote_incomplete': '步骤引用缺少等号一侧，需引用完整变形后再判断。',
+    'step_mixed_equalities': '引用混合了成立与不成立的数值等式，请分开逐步判断。',
+    'step_arithmetic_verdict_mismatch': '步骤判断与受限数值等式检查冲突；不能因最终答案错误而否定成立的局部运算。',
 }
 
 
@@ -129,4 +135,9 @@ def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=
     if not solved and (value['steps'] or diagnoses or comparisons or review['observed_approach'].strip()
                        or (kind!='none' and review['verdict']!='uncertain')):
         raise ValueError('条件缺失时先澄清，不输出确定解法或学生错因。')
+    # 旧存档只兼容读取；新请求和接受候选时检查新证据规则，不重写历史回复。
+    if not allow_legacy:
+        issue = evidence_issue(value)
+        if issue:
+            raise AnalysisValidationError(issue)
     return value

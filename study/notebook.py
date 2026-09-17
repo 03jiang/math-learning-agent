@@ -81,7 +81,7 @@ def validate_entry(entry):
             text(row['analysis_origin'],'订正分析来源',100,True)
             datetime.fromisoformat(row['at'])
             validate_result(row['result'],previous_work=prior_work,previous_analysis=prior_analysis,
-                            answer=row['answer'],work_kind=row['work_kind'])
+                            answer=row['answer'],work_kind=row['work_kind'],allow_legacy=True)
             prior_id,prior_work,prior_analysis=row['id'],row['answer'],row['result']['analysis']
     if entry['schema_version']>=3:
         if entry['work_image'] is not None: image_bytes(entry['work_image'])
@@ -197,11 +197,25 @@ class Notebook:
 
     def save_new(self, entry):
         validate_entry(entry)
+        # 兼容读取旧回复不等于允许新收藏绕过当前证据规则。
+        def check_new_evidence():
+            from study.diagnosis import validate_analysis
+            from study.corrections import validate_result
+            previous_work, previous_analysis = entry['my_work'], entry['analysis']
+            if previous_analysis is not None and previous_analysis.get('schema_version') == 2:
+                validate_analysis(previous_analysis, student_work=previous_work)
+            for row in entry.get('corrections', []):
+                validate_result(row['result'], previous_work=previous_work, previous_analysis=previous_analysis,
+                                answer=row['answer'], work_kind=row['work_kind'])
+                previous_work, previous_analysis = row['answer'], row['result']['analysis']
+        if not self.path(entry['id']).exists():
+            check_new_evidence()  # 无效新记录不创建存档目录。
         with self.locked():
             if self.path(entry['id']).exists():
                 previous=self.get(entry['id'])
                 if previous == entry: return 'already_saved'
                 raise ValueError('该编号已有不同内容，未覆盖。请重新开始一道题。')
+            check_new_evidence()  # 加锁期间重新检查，避免旧文件消失后绕过新存档规则。
             self.write(entry)
         return 'saved'
 
@@ -259,6 +273,10 @@ class Notebook:
             if type(version) is not int or entry['version']!=version or baseline(entry)['id']!=based_on:
                 raise ValueError('本题或对照作答已更新，请重新核对并分析。')
             text(answer,'本次订正',3000,True)
+            from study.corrections import validate_result
+            previous = baseline(entry)
+            validate_result(result, previous_work=previous['work'], previous_analysis=previous['analysis'],
+                            answer=answer, work_kind=work_kind)
             entry.setdefault('corrections',[]).append({'id':operation_id,'at':now(),'based_on':based_on,
                 'answer':answer.strip(),'work_kind':work_kind,'result':deepcopy(result),'analysis_origin':analysis_origin})
             entry['schema_version']=max(entry['schema_version'],2)

@@ -6,10 +6,11 @@ import re
 from model_api import ModelAPIError
 from study.diagnosis import WORK_KINDS, VERDICTS, validate_analysis
 from study.notebook import REASONS
+from study.evidence import ANSWER_ONLY_FEEDBACK
 
 OUTPUT_MODES = ('json_object', 'strict_tool')
 STRICT_ENDPOINT = 'https://api.deepseek.com/beta/chat/completions'
-CONTRACT_VERSION = 'study-strict-output-v2'
+CONTRACT_VERSION = 'study-strict-output-v3'
 FUNCTIONS = {'analyze': 'return_math_analysis', 'reanalyze': 'return_math_correction',
              'recognize': 'return_math_transcription'}
 ISSUES = {
@@ -119,6 +120,12 @@ def output_schema(operation, *, context=None):
         })),
         'takeaway': string(), 'next_practice': string(), 'clarification': string(),
     })
+    if context is not None and context.get('student_work_kind') == 'answer_only':
+        review = analysis['properties']['student_review']['properties']
+        review['work_kind'] = string(('answer_only',))
+        review['verdict'] = string(ANSWER_ONLY_FEEDBACK)
+        review['observed_approach'] = string(('',))
+        review['answer_feedback'] = string(ANSWER_ONLY_FEEDBACK.values())
     if operation == 'analyze':
         return analysis
     if operation == 'reanalyze':

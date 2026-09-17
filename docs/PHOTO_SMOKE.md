@@ -38,11 +38,11 @@ python -B -m study.photo_smoke run --directory /tmp/math-photo-live-new \
 
 本次输入 2,180、输出 107、合计 2,287 token，累计请求耗时 3,078.30 ms。实际费用未知。本计划两次额度已用完，完成状态再次检查不会读取密钥或发请求；原始报告和人工评分表未变，没有分析、收藏或自动标记掌握。
 
-下一验收点是：用户确认这两份识别文字作为输入 → 新分析计划预览与预算确认 → 分析与主动收藏 → 新进程恢复。真实手机手写照片仍待提供；13 张合成图片不替代该验证。人工评分继续暂缓，Agent 工具循环和新版独立评估尚未完成。
+上述输入与预算后来已获用户确认，两次分析已运行，结果见下文。尚未完成真实分析的内容验收、主动收藏与新进程恢复。真实手机手写照片仍待提供；13 张合成图片不替代该验证。人工评分继续暂缓，Agent 工具循环和新版独立评估尚未完成。
 
 DeepSeek 官方[视觉理解文档](https://api-docs.deepseek.com/zh-cn/guides/vision/)说明 `deepseek-flash` 支持 Chat Completions 的用户消息图片。当前入口复用应用配置和 `/chat/completions`，用 `image_url` 传规范化图片，保留 `json_object` 默认返回格式。官方支持不等于本项目真实照片已验收。
 
-## 识图后分析：已实现，真实运行待确认
+## 识图后分析：真实运行完成，内容发现问题
 
 `tools/verify_study_live.py --ocr-from` 只读复用上述两条完整的 OCR 回复，不重复识图；来源模式、请求、原图、回复和观察记录必须相符。新的分析计划冻结来源文件哈希，之后来源变化会阻止发送和保存。本机 OCR 不能被用作真实分析的来源。
 
@@ -65,7 +65,7 @@ python -B tools/verify_study_live.py decide --directory /tmp/photo-analysis-new 
 python -B tools/verify_study_live.py decide --directory /tmp/photo-analysis-new --row b02 --reject
 ```
 
-本轮拟用原有 `strict_tool` 返回格式约束分析字段，thinking 为 disabled，输出最多 4096 token，超时 60 秒。根据[官方 strict 文档](https://api-docs.deepseek.com/zh-cn/guides/tool_calls/)，该格式使用 `/beta/chat/completions`。实际仍是一轮分析请求，不执行模型选出的工具，也没有自动回退。图片和 strict 组合在本机 HTTP 已覆盖，供应商实际效果待本轮验证；不把格式约束说成教学正确性保证。应用页面默认返回模式不变。
+本次已完成的真实分析使用 `strict_tool` 返回格式约束分析字段，thinking 为 disabled，输出最多 4096 token，超时 60 秒。根据[官方 strict 文档](https://api-docs.deepseek.com/zh-cn/guides/tool_calls/)，该格式使用 `/beta/chat/completions`。实际仍是一轮分析请求，不执行模型选出的工具，也没有自动回退。图片和 strict 组合已收到两次真实 HTTP 200，格式通过但内容复核发现问题；不把格式约束说成教学正确性保证。应用页面默认返回模式不变。
 
 本机完整演练可用两个新目录：
 
@@ -76,3 +76,11 @@ python -B tools/verify_study_live.py local --ocr-from /tmp/photo-ocr-local-new \
 ```
 
 这会使用标明来源的手写 HTTP 响应，模拟核对输入、拒绝第二题、接受第一题、重复确认与重新读取。真实请求数为零；模拟决定与质量评分分开。真实结果、用户照片和原始调用报告不进入源码仓库。
+
+## 内容缺陷与离线修复
+
+两次真实分析合计输入 6,363、输出 1,254、总计 7,617 token，累计请求耗时 6,362.08 ms，实际费用未知。参考答案均为 3/4，但有步骤样本将后续成立的局部运算也标错；只有答案样本在 answer_feedback 中推断计算方法。结构化字段为空不能阻止自由文本中的无依据推断。
+
+两条原始记录保留当时的 reply_valid，助手复核发现的问题单独记录，不补填教师评分；目前没有接受或拒绝收藏。该计划两次额度已用完，不续跑、不自动新建付费计划。
+
+本轮新增固定答案反馈、受限等式检查及回归测试；详见[分析证据检查与边界](ANALYSIS_EVIDENCE.md)。新版提示词 photo-study-v6 / photo-correction-v6、strict 协议 study-strict-output-v3 尚未真实回归，不能将离线通过记为模型改善。旧候选不会自动改写为正确结果。

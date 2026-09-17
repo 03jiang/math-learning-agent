@@ -184,6 +184,48 @@ class PhotoAnalysisTests(unittest.TestCase):
         self.assertIn('先确认两份识图文字',error.getvalue())
         self.assertEqual([],self.server.requests)
 
+    def test_bad_partial_step_stops_photo_run_and_preserves_original_reply(self):
+        audit=self.create();confirm_inputs(audit,actor='local_fixture')
+        fixture=local_fixture(audit)
+        def wrong_step(payload):
+            envelope=fixture(payload);holder=envelope['choices'][0]['message']['tool_calls'][0]['function']
+            value=json.loads(holder['arguments'])
+            value['student_review']['comparisons'][1].update(student_excerpt='= 2/6',verdict='incorrect')
+            holder['arguments']=json.dumps(value,ensure_ascii=False)
+            return envelope
+        self.server.body=wrong_step
+        state=execute(audit,server=self.server)
+        self.assertEqual(1,state['counts']['failed']);self.assertEqual(1,state['counts']['pending'])
+        row=audit.row('b01')
+        self.assertEqual('step_quote_incomplete',row['call']['validation_issue'])
+        self.assertIsNone(row['result'])
+        raw=json.loads(row['diagnostic_content'])
+        self.assertEqual('= 2/6',raw['student_review']['comparisons'][1]['student_excerpt'])
+        with self.assertRaises(AuditError): execute(audit,server=self.server)
+        with self.assertRaises(AuditError): decide(audit,'b01','accept')
+        self.assertEqual(1,len(self.server.requests));self.assertFalse(notebook(audit).directory.exists())
+
+    def test_inferred_answer_feedback_is_rejected_in_json_and_strict_photo_paths(self):
+        for mode in ('json_object','strict_tool'):
+            audit=create_run(self.root/mode,mode='local_http_test',ocr_from=self.source.directory,output_mode=mode)
+            confirm_inputs(audit,actor='local_fixture');fixture=local_fixture(audit)
+            def bad_feedback(payload):
+                envelope=fixture(payload);msg=envelope['choices'][0]['message']
+                holder,key=(msg['tool_calls'][0]['function'],'arguments') if mode=='strict_tool' else (msg,'content')
+                value=json.loads(holder[key])
+                if value['student_review']['work_kind']=='answer_only':
+                    value['student_review']['answer_feedback']='2/6 是把分子、分母分别相加得到的。'
+                holder[key]=json.dumps(value,ensure_ascii=False)
+                return envelope
+            self.server.body=bad_feedback
+            state=execute(audit,server=self.server)
+            self.assertEqual(1,state['counts']['reply_valid']);self.assertEqual(1,state['counts']['failed'])
+            self.assertEqual('answer_only_feedback_not_bounded',audit.row('b02')['call']['validation_issue'])
+            count=len(self.server.requests)
+            with self.assertRaises(AuditError): execute(audit,server=self.server)
+            with self.assertRaises(AuditError): decide(audit,'b02','accept')
+            self.assertEqual(count,len(self.server.requests));self.assertFalse(notebook(audit).directory.exists())
+
     def test_expired_or_tampered_analysis_does_not_save(self):
         audit=self.create();self.analyze(audit)
         old=audit.row('b01')
