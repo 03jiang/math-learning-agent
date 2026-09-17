@@ -189,3 +189,29 @@ python -B -m unittest test_structured_output -v
 - `test_structured_output.py`：严格返回格式、本机七步流程、重复键、HTTP 拒绝与无回退、确认及恢复的回归。
 
 下一验收是：另行批准预算后，完成一组非预设文字题的真实分析—确认保存—再次订正—重新打开，检查真实输出并记录失败。随后再验证图片原始转录、人工修正和分析。本轮尚未验收真实文字质量、照片质量或模型选工具能力。
+
+### 第六份计划：真实回复正确，跨步骤引用被校验器误拒绝
+
+提交 `95810c9`，单条计划 `ca64b681527614757524ebe3fb3c0380935eea725bca3fe961b5f53e2bce8309`，只复用已确认 b02 后请求 b06 一次。HTTP 200，用量输入 4099、输出 807 token，4382.28 毫秒；返回符合动态 strict schema。当前 5/6、通分和相加判断均正确，summary 明确认可旧约分本身正确，没有重复第五份计划的错误。
+
+失败原因：changes.current_excerpt 同时引用两条当前正确步骤，而旧 excerpt_has_verdict 只判断“整段引用是否位于某一条 comparison 内”。两条分开检查都正确，合起来就被误判为 correction_current_verdict_mismatch。这是本地证据覆盖算法的错误拒绝，不能记为模型数学错误。
+
+修复为按已核对原文的位置检查覆盖：忽略空白，但不改运算符、数字、顺序；每个引用字符都须由对应 verdict 的 comparison 覆盖。只覆盖其中一步、夹带未分析内容或有冲突/不确定判断时仍拒绝。旧正确步骤不得声明 corrected/still_incorrect 的规则保留。证据版本为 correction-evidence-v2，不改提示词或服务端 schema，不自动切分/修改模型回复。
+
+原始六份账本累计 9 次调用、4 条 reply_valid、5 条 failed、2 条分析确认保存；输入 18,429、输出 6,331 token。此次误拒绝保持 failed，另记原文离线复核通过 1 条，不能用复核覆盖原失败或计作新请求。未新增付费调用，数学核对为 Codex 辅助检查，非教师评分。当前没有新订正保存。
+
+### 已返回回复的离线复核与确认
+
+```bash
+python tools/revalidate_correction.py preview --source evaluation_runs/failed-single-correction \
+  --row b06 --output evaluation_runs/revalidated-correction
+python tools/revalidate_correction.py status --directory evaluation_runs/revalidated-correction
+# 阅读原文后，由用户明确选择 accept 或 reject：
+python tools/revalidate_correction.py accept --directory evaluation_runs/revalidated-correction
+```
+
+此入口没有密钥或网络请求参数。只支持本次已完整返回、strict 格式可核对、因当前步骤证据检查失败的单条复用订正。HTTP/JSON 错误、可能截断、来源变化、仍不符合 schema 或新版证据检查的回复不生成候选。不恢复供应商内部推理，不读取未记录的内容。
+
+`candidate.json` 记录原失败和原文字节哈希、来源计划及父存档、新版校验代码、原样解析结果和复核编号；`decision.json` 单独记录用户决定。原审计目录始终只读。复核候选从本次复核起 24 小时有效；代码、原文或父存档变化即失效。确认时再次检查并使用原子写入保存，重复确认和确认日志写入中断的恢复不会追加第二条订正。未确认/拒绝不创建 notebook；保存不改变自评或宣布掌握。
+
+`study/revalidation.py` 负责来源校验、候选冻结和确认；`tools/revalidate_correction.py` 提供明确标为 offline_revalidation 的入口；`test_revalidation.py` 使用本机手写响应检查确认、过期、篡改、保存失败、新进程恢复等边界。真实原文离线复核通过后，仍须用户确认保存才能完成持久化验收。

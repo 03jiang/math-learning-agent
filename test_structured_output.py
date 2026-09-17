@@ -316,6 +316,65 @@ class CorrectionEvidenceTests(unittest.TestCase):
         with self.assertRaises(CorrectionValidationError) as caught: self.validate(value)
         self.assertEqual('correction_current_verdict_mismatch', caught.exception.code)
 
+    def test_combined_current_steps_all_correct_are_valid_without_rewriting(self):
+        value = deepcopy(self.result)
+        value['comparison']['changes'][0]['current_excerpt'] = self.context['student_work']
+        before = deepcopy(value)
+        Draft202012Validator(self.schema).validate(value)
+        self.assertEqual(value, self.validate(value))
+        self.assertEqual(before, value)
+
+    def test_combined_current_steps_reject_mixed_or_uncertain_verdicts(self):
+        for verdict in ('incorrect','uncertain'):
+            value = deepcopy(self.result)
+            value['comparison']['changes'][0]['current_excerpt'] = self.context['student_work']
+            value['analysis']['student_review']['comparisons'][0]['verdict'] = verdict
+            value['analysis']['student_review']['verdict'] = 'partial' if verdict=='incorrect' else 'uncertain'
+            with self.subTest(verdict=verdict), self.assertRaises(CorrectionValidationError) as caught:
+                self.validate(value)
+            self.assertEqual('correction_current_verdict_mismatch', caught.exception.code)
+
+    def test_combined_current_quote_cannot_include_unreviewed_content(self):
+        value = deepcopy(self.result)
+        original = self.context['student_work']
+        for work in (original+'\n5/6 = 7/8', original.replace('\n','\n5/6 = 7/8\n')):
+            value['comparison']['changes'][0]['current_excerpt'] = work
+            with self.subTest(work=work), self.assertRaises(CorrectionValidationError) as caught:
+                validate_result(value,previous_work=self.context['previous_student_work'],
+                    previous_analysis=self.context['previous_analysis'],answer=work,work_kind='steps')
+            self.assertEqual('correction_current_verdict_mismatch', caught.exception.code)
+
+    def test_conflicting_overlapping_judgment_cannot_be_ignored(self):
+        value = deepcopy(self.result)
+        value['comparison']['changes'][0]['current_excerpt'] = self.context['student_work']
+        conflict = deepcopy(value['analysis']['student_review']['comparisons'][0])
+        conflict['verdict'] = 'uncertain'
+        value['analysis']['student_review']['comparisons'].append(conflict)
+        value['analysis']['student_review']['verdict'] = 'uncertain'
+        with self.assertRaises(CorrectionValidationError): self.validate(value)
+
+    def test_combined_quote_still_requires_literal_order_and_operators(self):
+        for quote in ('\n'.join(reversed(self.context['student_work'].splitlines())),
+                      self.context['student_work'].replace(' + ',' - ',1)):
+            value = deepcopy(self.result)
+            value['comparison']['changes'][0]['current_excerpt'] = quote
+            with self.subTest(quote=quote), self.assertRaises(ValueError): self.validate(value)
+
+    def test_previous_wrong_and_correct_steps_cannot_jointly_claim_corrected(self):
+        value = deepcopy(self.result)
+        value['comparison']['changes'][0]['previous_excerpt'] = self.context['previous_student_work']
+        with self.assertRaises(CorrectionValidationError) as caught: self.validate(value)
+        self.assertEqual('correction_previous_not_incorrect', caught.exception.code)
+
+    def test_multi_step_still_incorrect_requires_all_referenced_steps_incorrect(self):
+        value = deepcopy(self.result)
+        value['comparison']['changes'][0].update(current_excerpt=self.context['student_work'],status='still_incorrect')
+        value['analysis']['student_review']['verdict'] = 'incorrect'
+        for step in value['analysis']['student_review']['comparisons']: step['verdict']='incorrect'
+        self.assertEqual(value,self.validate(value))  # 标签检查；手写内容不是数学评分。
+        value['analysis']['student_review']['comparisons'][0]['verdict']='correct'
+        with self.assertRaises(CorrectionValidationError): self.validate(value)
+
     def test_no_previous_wrong_steps_has_no_corrected_branch_or_empty_enum(self):
         context, value = correction_fixture_context('b04','b07')
         schema = output_schema('reanalyze', context=context)
