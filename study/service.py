@@ -221,16 +221,8 @@ class StudyService:
                  else chat_response_text(envelope,record))
             value=parse(raw)
             if operation=='recognize':
-                if type(value) is not dict or set(value)!= {'text','student_work','work_kind','warnings'}:
-                    raise ValueError('识图回复字段不正确。')
-                text(value['text'],'识别题目',6000,True)
-                if image is None and value['text']!=context['provided_question']:
-                    raise ValueError('仅识别作答照片时不能改写用户输入的题目。')
-                text(value['student_work'],'识别作答',3000)
-                if value['work_kind'] not in tuple(WORK_KINDS): raise ValueError('识图作答类型无效。')
-                work_kind_for(value['student_work'],value['work_kind'])
-                if type(value['warnings']) is not list or len(value['warnings'])>12: raise ValueError('识图提示无效。')
-                for warning in value['warnings']: text(warning,'识图提示',500,True)
+                from study.transcription import validate_recognition
+                validate_recognition(value,provided_question=context['provided_question'] if image is None else None)
             elif operation=='reanalyze':
                 validate_result(value,previous_work=context['previous_student_work'],
                     previous_analysis=context['previous_analysis'],answer=context['student_work'],work_kind=context['student_work_kind'])

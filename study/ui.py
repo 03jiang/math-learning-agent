@@ -41,6 +41,7 @@ def draft():
         st.session_state.photo_image=None
         st.session_state.photo_work_image=None
         st.session_state.photo_recognition=None
+        st.session_state.photo_observation=None
         st.session_state.photo_analysis=None
         st.session_state.photo_calls={}
     return st.session_state.photo_draft_id
@@ -136,6 +137,25 @@ def show_analysis(analysis, *, example=False):
     st.caption('以上是人工编写的展示示例。' if example else '以上是模型生成的学习建议，尚未经过教师核对。')
 
 
+def show_transcription(observation, current, *, saved=False):
+    with st.expander('对照原始识别与核对内容'):
+        st.caption(observation['origin']+' · '+observation['observed_at'])
+        if observation['mode']=='offline_demo': st.caption('离线预设文字，不代表真实识图效果。')
+        left,right=st.columns(2)
+        for column,title,value in ((left,'原始识别（保留不改）',observation['raw']),
+                                   (right,'收藏时核对内容' if saved else '当前核对草稿',current)):
+            with column:
+                st.markdown('**'+title+'**')
+                st.text('题目：'+value['text'])
+                st.text('作答：'+(value['student_work'] or '未提供'))
+                st.caption('作答类型：'+WORK_KINDS[value['work_kind']])
+        labels={'text':'题目','student_work':'作答','work_kind':'作答类型'}
+        changed=[labels[k] for k,v in current.items() if v!=observation['raw'][k]]
+        st.caption('已修改：'+'、'.join(changed) if changed else '核对内容与原始识别一致。')
+        for warning in observation['raw']['warnings']: st.warning(warning)
+        if not saved: st.caption('点击“确认加入错题本”后，这两份内容才会一起保存。')
+
+
 def render_capture(notebook):
     entry_id=draft()
     st.title('拍下题目，慢慢弄懂')
@@ -185,6 +205,9 @@ def render_capture(notebook):
         if my_work.strip():
             work_kind=st.radio('当前作答包含什么',['unclear','answer_only','steps'],
                 format_func=WORK_KINDS.get,key='photo_work_kind',horizontal=True,on_change=unconfirm_question)
+        observation=st.session_state.get('photo_observation')
+        if observation:
+            show_transcription(observation,{'text':question.strip(),'student_work':my_work.strip(),'work_kind':work_kind})
         st.caption('核对范围包括题干、图形、原作答及作答类型。修改任一作答内容后需要重新勾选。')
         confirmed=st.checkbox('题干与图形条件已核对',key='photo_confirmed')
         current=fingerprint(question,level,my_work,image,work_kind,work_image=work_image)
@@ -222,9 +245,11 @@ def render_capture(notebook):
         saved=st.form_submit_button('确认加入错题本',type='primary',disabled=not(question.strip() and confirmed))
     if saved:
         try:
+            from study.transcription import confirm
+            transcription=confirm(observation,question,my_work,work_kind,image,work_image) if observation else None
             entry=make_entry(entry_id,question=question,level=level,my_work=my_work,topic=topic,reason=reason,
                 correction=correction,image=image,work_image=work_image,analysis=active['value'] if active else None,
-                analysis_origin=active['origin'] if active else '手动整理（没有模型分析）')
+                analysis_origin=active['origin'] if active else '手动整理（没有模型分析）',transcription=transcription)
             notebook.save_new(entry)
             st.session_state.photo_saved=True
             st.rerun()
@@ -260,6 +285,8 @@ def render_notebook(notebook,entries):
         with st.expander('查看题目照片'): st.image(image_bytes(entry['image']),width='stretch')
     if entry.get('work_image'):
         with st.expander('查看作答照片'): st.image(image_bytes(entry['work_image']),width='stretch')
+    if entry.get('transcription'):
+        show_transcription(entry['transcription']['observation'],entry['transcription']['confirmed'],saved=True)
     with st.expander('查看原作答与参考分析'):
         st.write(entry['my_work'] or '未记录原作答。')
         st.caption(entry['analysis_origin'])

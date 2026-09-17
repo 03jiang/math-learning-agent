@@ -16,5 +16,17 @@
   "live_photo_model_quality": "not_verified",
   "human_quality_scores": "not_filled",
   "learning_outcomes": "not_measured",
-  "github_ci": "See GitHub Actions for the public commit; this file records local verification."
+  "github_ci": "See GitHub Actions for the public commit; this file records local verification.",
+  "latest_offline_verification": {
+    "checked_at": "2026-09-17T09:14:22.664447+00:00",
+    "scope": "OCR original vs confirmed persistence and bounded two-image recognition runner",
+    "application_tests_passed": 420,
+    "elapsed_seconds": 47.437,
+    "new_tests": 16,
+    "exported_source_targeted_tests_passed": 16,
+    "local_photo_requests": 2,
+    "real_api_calls": 0,
+    "original_ocr_quality": "not_evaluated",
+    "handwritten_phone_photo_quality": "not_verified"
+  }
 }

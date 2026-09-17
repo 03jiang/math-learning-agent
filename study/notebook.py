@@ -31,10 +31,11 @@ def text(value, name, maximum=6000, required=False):
 def validate_entry(entry):
     expected = {'schema_version','id','version','created_at','updated_at','question','level','my_work',
                 'topic','reason','correction','analysis','analysis_origin','image','reviews','operation_ids'}
-    if type(entry) is not dict or type(entry.get('schema_version')) is not int or entry['schema_version'] not in (1,2,3):
+    if type(entry) is not dict or type(entry.get('schema_version')) is not int or entry['schema_version'] not in (1,2,3,4):
         raise ValueError('错题存档格式不正确，未覆盖原文件。')
     if entry['schema_version']>=2: expected.add('corrections')
-    if entry['schema_version']==3: expected.update(('work_image','archived_at','archive_events'))
+    if entry['schema_version']>=3: expected.update(('work_image','archived_at','archive_events'))
+    if entry['schema_version']==4: expected.add('transcription')
     if set(entry)!=expected: raise ValueError('错题存档字段不正确，未覆盖原文件。')
     if not isinstance(entry['id'], str) or not ID.fullmatch(entry['id']):
         raise ValueError('错题编号无效。')
@@ -82,7 +83,7 @@ def validate_entry(entry):
             validate_result(row['result'],previous_work=prior_work,previous_analysis=prior_analysis,
                             answer=row['answer'],work_kind=row['work_kind'])
             prior_id,prior_work,prior_analysis=row['id'],row['answer'],row['result']['analysis']
-    if entry['schema_version']==3:
+    if entry['schema_version']>=3:
         if entry['work_image'] is not None: image_bytes(entry['work_image'])
         if entry['archived_at'] is not None:
             text(entry['archived_at'],'回收站时间',100,True)
@@ -102,6 +103,13 @@ def validate_entry(entry):
             archived_at=event['at'] if expected_archived else None
         if entry['archived_at']!=archived_at:
             raise ValueError('回收站状态与操作记录不符。')
+    if entry['schema_version']==4:
+        from study.transcription import validate_trace
+        validate_trace(entry['transcription'],question=entry['question'],my_work=entry['my_work'],
+                       image=entry['image'],work_image=entry['work_image'])
+        if entry['analysis'] and entry['analysis'].get('schema_version')==2:
+            if entry['analysis']['student_review']['work_kind']!=entry['transcription']['confirmed']['work_kind']:
+                raise ValueError('分析作答类型与核对记录不同。')
     return entry
 
 
@@ -110,7 +118,7 @@ def upgrade_v3(entry):
     entry.setdefault('work_image',None)
     entry.setdefault('archived_at',None)
     entry.setdefault('archive_events',[])
-    entry['schema_version']=3
+    entry['schema_version']=max(entry['schema_version'],3)
     return entry
 
 
@@ -120,7 +128,7 @@ def ensure_active(entry):
 
 
 def make_entry(entry_id, *, question, level, my_work='', topic='待整理', reason='尚不确定',
-               correction='', analysis=None, analysis_origin='手动整理', image=None,work_image=None):
+               correction='', analysis=None, analysis_origin='手动整理', image=None,work_image=None,transcription=None):
     stamp=now()
     entry={'schema_version':1,'id':entry_id,'version':1,'created_at':stamp,'updated_at':stamp,
         'question':question.strip(),'level':level,'my_work':my_work.strip(),'topic':topic.strip(),
@@ -128,6 +136,9 @@ def make_entry(entry_id, *, question, level, my_work='', topic='待整理', reas
         'analysis_origin':analysis_origin,'image':deepcopy(image),'reviews':[],'operation_ids':[]}
     if work_image is not None:
         upgrade_v3(entry)['work_image']=deepcopy(work_image)
+    if transcription is not None:
+        upgrade_v3(entry)['transcription']=deepcopy(transcription)
+        entry['schema_version']=4
     return validate_entry(entry)
 
 
