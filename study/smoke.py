@@ -1,4 +1,4 @@
-"""复用 StudyService 与 Notebook 的可暂停文字验证；不接旧四题参考答案。"""
+"""复用 StudyService 与 Notebook 的文字与识图后分析验证；不向模型发送核对参考。"""
 from dataclasses import asdict, replace
 from datetime import datetime, timezone, timedelta
 import hashlib
@@ -23,6 +23,7 @@ CASES = ROOT / 'evaluation/study_smoke_v1.json'
 def source_snapshot():
     paths = sorted({*ROOT.glob('*.py'), *ROOT.glob('study/*.py'), *ROOT.glob('tools/*.py'),
                     CASES, ROOT / 'evaluation/study_smoke_local_responses.json',
+                    ROOT / 'evaluation/photo_analysis_local_responses.json',
                     ROOT / 'requirements-lock.txt', ROOT / 'model_config.deepseek.example.json'})
     hashes = {p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
     try:
@@ -147,23 +148,31 @@ def verify_source(audit):
     return current['entry']
 
 
-def create_run(output, *, mode='real_api', config=None, row_ids=None, output_mode='json_object', reuse_from=None):
+def create_run(output, *, mode='real_api', config=None, row_ids=None, output_mode='json_object', reuse_from=None, ocr_from=None):
     if mode not in ('real_api', 'local_http_test'):
         raise AuditError('未知运行模式。')
     config = config or default_config()
     if (config.mode, config.provider, config.api_format) != ('api', 'deepseek', 'chat_completions'):
         raise AuditError('文字验证使用 DeepSeek Chat Completions 配置。')
     provider_endpoint = endpoint(config, output_mode)
-    rows = make_rows(config, output_mode)
-    selected, source = (reused_correction(rows, reuse_from, row_ids, mode, config, output_mode)
-                        if reuse_from is not None else (select_rows(rows, row_ids), None))
-    audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-text-smoke-v1',
+    source,ocr_source=None,None
+    if ocr_from is not None:
+        if reuse_from is not None or row_ids is not None:
+            raise AuditError('识图后分析固定两条，不能混用订正来源或替换请求范围。')
+        from study.photo_analysis import make_rows as photo_rows
+        selected,ocr_source=photo_rows(ocr_from,mode,config,output_mode)
+    else:
+        rows = make_rows(config, output_mode)
+        selected, source = (reused_correction(rows, reuse_from, row_ids, mode, config, output_mode)
+                            if reuse_from is not None else (select_rows(rows, row_ids), None))
+    audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-photo-analysis-v1' if ocr_source else 'study-text-smoke-v1',
         'execution_mode': mode, 'code': source_snapshot(), 'config': asdict(config),
         'output_mode': output_mode, 'provider_endpoint': provider_endpoint,
         'output_contract': CONTRACT_VERSION if output_mode == 'strict_tool' else 'json-object-v1',
         'prompt_versions': {'analyze': ANALYSIS_PROMPT_VERSION, 'reanalyze': CORRECTION_PROMPT_VERSION},
         'row_selection': [row['row_id'] for row in selected],
         **({'parent_source': source} if source else {}),
+        **({'ocr_source':ocr_source} if ocr_source else {}),
         'rows': selected, 'planned_requests': len(selected), 'real_requests_on_preview': 0,
         'cost_estimate_cny': None, 'human_scoring': '未评分'})
     write_json(audit.directory / 'review.json', {'label': '人工检查表；空白为未评，不是 0 分',
@@ -185,7 +194,12 @@ def verify_frozen(audit, *, live=False):
     if (audit.manifest.get('provider_endpoint') != endpoint(config, output_mode)
             or audit.manifest.get('output_contract') != expected_contract):
         raise AuditError('返回格式或供应商地址与当前实现不符。')
-    if 'parent_source' in audit.manifest:
+    if 'ocr_source' in audit.manifest:
+        from study.photo_analysis import make_rows as photo_rows
+        selected,source=photo_rows(audit.manifest['ocr_source']['directory'],audit.manifest['execution_mode'],config,output_mode)
+        if source!=audit.manifest['ocr_source']:
+            raise AuditError('识图来源已改变，不能请求或保存。')
+    elif 'parent_source' in audit.manifest:
         selected, source = reused_correction(make_rows(config, output_mode),
             audit.manifest['parent_source']['directory'], audit.manifest.get('row_selection'),
             audit.manifest['execution_mode'], config, output_mode)
@@ -232,6 +246,9 @@ def execute(audit, *, key='', max_requests=None, confirm_plan=None, budget_note=
     live = audit.manifest['execution_mode'] == 'real_api'
     output_mode = audit.manifest.get('output_mode', 'json_object')
     verify_frozen(audit, live=live)
+    if 'ocr_source' in audit.manifest:
+        from study.photo_analysis import input_confirmation
+        input_confirmation(audit)
     if live:
         if server is not None:
             raise AuditError('真实模式不能注入模拟响应。')
@@ -275,7 +292,7 @@ def execute(audit, *, key='', max_requests=None, confirm_plan=None, budget_note=
             try:
                 if planned['operation'] == 'analyze':
                     service.analyze(context['confirmed_question'], context['school_level'],
-                                    context['student_work'], work_kind=context['student_work_kind'])
+                                    context['student_work'], image=planned.get('image'),work_kind=context['student_work_kind'])
                 else:
                     service.reanalyze(previous, context['student_work'], work_kind=context['student_work_kind'])
             except (ValueError, OSError):
@@ -305,6 +322,10 @@ def decide(audit, row_id, action, *, actor='user'):
             raise AuditError('分析结果被修改，不能确认。')
         saved = None
         if action == 'accept':
+            if 'ocr_source' in audit.manifest:
+                verify_frozen(audit)
+                if row['payload']!=audit.rows[row_id]['payload'] or row['request_hash']!=digest(row['payload']):
+                    raise AuditError('分析请求与冻结输入不同，未保存。')
             if datetime.now(timezone.utc) - datetime.fromisoformat(row['finished_at']) > timedelta(hours=24):
                 raise AuditError('候选分析超过 24 小时，请重新核对；没有保存。')
             planned = audit.rows[row_id]
@@ -313,9 +334,13 @@ def decide(audit, row_id, action, *, actor='user'):
             book = notebook(audit)
             if planned['operation'] == 'analyze':
                 validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'])
+                photo_fields={}
+                if 'ocr_source' in audit.manifest:
+                    from study.photo_analysis import entry_fields
+                    photo_fields=entry_fields(audit,row_id)
                 entry = make_entry(entry_id(audit, row_id), question=context['confirmed_question'],
                     level=context['school_level'], my_work=context['student_work'], topic=row['result']['topic'],
-                    analysis=row['result'], analysis_origin=origin)
+                    analysis=row['result'], analysis_origin=origin,**photo_fields)
                 # 稳定时间与编号让“写入后、决定日志前”崩溃的重放也保持幂等。
                 entry['created_at'] = entry['updated_at'] = row['finished_at']
                 book.save_new(entry)
@@ -348,13 +373,13 @@ def report(audit):
     write_json(audit.directory / 'status.json', state)
     analyses = sum(row['operation'] == 'analyze' for row in audit.rows.values())
     corrections = len(audit.rows) - analyses
-    lines = ['# 当前主流程文字验证', '',
+    lines = ['# 识图后分析验证' if 'ocr_source' in audit.manifest else '# 当前主流程文字验证', '',
         '**本机手写响应，只验证软件流程。**' if state['mode'] == 'local_http_test' else '**请求预览 / 真实执行账本；以每行状态为准。**',
         '', f"计划编号：`{state['plan_id']}`", '',
         f"返回格式：`{audit.manifest.get('output_mode', 'json_object')}`；地址：`{audit.manifest.get('provider_endpoint', '见冻结配置')}`。",
         f'{analyses} 次分析 + {corrections} 次依赖已确认存档的订正，最多 {len(audit.rows)} 次。预览不请求模型。',
         '费用未知，不等于免费；请求次数是硬上限，预算说明是人工确认记录，不是供应商扣费封顶。',
-        '参考答案只用于人工核对，不进入模型请求。review.json 的空值为未评。', '',
+        '核对参考字段不拼入模型请求；原图可能有可见教师批注。review.json 的空值为未评。', '',
         '| 请求 | 题目 | 操作 | 依赖 | 状态 | 保存决定 |', '|---|---|---|---|---|---|']
     for row_id, planned in audit.rows.items():
         row = audit.row(row_id)
@@ -370,5 +395,10 @@ def report(audit):
             'parent_source 冻结来源文件哈希和已确认存档，订正 payload 已完整预览。',
             '只有确认本次订正后，才将原记录与新订正一次写入本计划 notebook；拒绝不创建错题本。',
             '复用不计为本计划的模型调用或新分析保存。原计划中的失败记录保持原样。', '']
+    if 'ocr_source' in audit.manifest:
+        lines += [f"只读复用识图计划 `{audit.manifest['ocr_source']['plan_id']}`；不重新识图。",
+            '运行前需 confirm-inputs 确认两份文字；这不接受模型分析、不创建错题本。',
+            '分析请求包含已核对文字和原图。教师批注仍可能在图中可见，但不能当学生作答。',
+            '确认接受分析后，原图、原始 OCR、核对记录、分析一起写入本计划 notebook/schema 4；重启可恢复。', '']
     (audit.directory / 'review.md').write_text('\n'.join(lines))
     return state

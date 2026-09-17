@@ -18,16 +18,17 @@
   "learning_outcomes": "not_measured",
   "github_ci": "See GitHub Actions for the public commit; this file records local verification.",
   "latest_offline_verification": {
-    "checked_at": "2026-09-17T09:14:22.664447+00:00",
-    "scope": "OCR original vs confirmed persistence and bounded two-image recognition runner",
-    "application_tests_passed": 420,
-    "elapsed_seconds": 47.437,
-    "new_tests": 16,
-    "exported_source_targeted_tests_passed": 16,
-    "local_photo_requests": 2,
+    "checked_at": "2026-09-17T09:45:02.908230+00:00",
+    "scope": "Reuse actual OCR in confirmed photo-analysis inputs, then accept/reject and restore schema 4",
+    "application_tests_passed": 437,
+    "elapsed_seconds": 53.691,
+    "new_tests": 17,
     "real_api_calls": 0,
-    "original_ocr_quality": "not_evaluated",
-    "handwritten_phone_photo_quality": "not_verified"
+    "local_simulation": "2 OCR plus 2 analysis HTTP handwritten replies; confirm inputs, reject one, save one and reopen",
+    "photo_analysis_with_real_api": "pending_user_input_and_budget_confirmation",
+    "human_quality_scores": null,
+    "exported_source_targeted_tests_passed": 17,
+    "exported_source_targeted_elapsed_seconds": 5.262
   },
   "latest_synthetic_ocr_verification": {
     "checked_at": "2026-09-17T09:28:18.010895+00:00",
@@ -53,5 +54,17 @@
     "real_handwritten_photos": "not_verified",
     "completed_plan_additional_calls": 0,
     "original_reports_unchanged": true
+  },
+  "ocr_trace_offline_verification": {
+    "checked_at": "2026-09-17T09:14:22.664447+00:00",
+    "scope": "OCR original vs confirmed persistence and bounded two-image recognition runner",
+    "application_tests_passed": 420,
+    "elapsed_seconds": 47.437,
+    "new_tests": 16,
+    "exported_source_targeted_tests_passed": 16,
+    "local_photo_requests": 2,
+    "real_api_calls": 0,
+    "original_ocr_quality": "not_evaluated",
+    "handwritten_phone_photo_quality": "not_verified"
   }
 }

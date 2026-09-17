@@ -41,3 +41,38 @@ python -B -m study.photo_smoke run --directory /tmp/math-photo-live-new \
 下一验收点是：用户确认这两份识别文字作为输入 → 新分析计划预览与预算确认 → 分析与主动收藏 → 新进程恢复。真实手机手写照片仍待提供；13 张合成图片不替代该验证。人工评分继续暂缓，Agent 工具循环和新版独立评估尚未完成。
 
 DeepSeek 官方[视觉理解文档](https://api-docs.deepseek.com/zh-cn/guides/vision/)说明 `deepseek-flash` 支持 Chat Completions 的用户消息图片。当前入口复用应用配置和 `/chat/completions`，用 `image_url` 传规范化图片，保留 `json_object` 默认返回格式。官方支持不等于本项目真实照片已验收。
+
+## 识图后分析：已实现，真实运行待确认
+
+`tools/verify_study_live.py --ocr-from` 只读复用上述两条完整的 OCR 回复，不重复识图；来源模式、请求、原图、回复和观察记录必须相符。新的分析计划冻结来源文件哈希，之后来源变化会阻止发送和保存。本机 OCR 不能被用作真实分析的来源。
+
+先预览两份输入，再用 `confirm-inputs` 记录用户核对。这一步不调用模型、不接受分析、不创建错题本。执行分析仍需单独确认 plan_id、累计请求上限及预算。分析结果的接受或拒绝是第三个决定；接受后，原图、原始 OCR、核对记录和分析一起进入本计划独立的 schema 4 错题本，不改日常数据、不增加自评或掌握状态。
+
+```bash
+# 只生成请求预览；目录必须不存在
+python -B tools/verify_study_live.py preview --ocr-from /tmp/existing-real-ocr \
+  --output /tmp/photo-analysis-new --output-mode strict_tool
+
+# 用户核对两份文字后才执行；零模型请求
+python -B tools/verify_study_live.py confirm-inputs --directory /tmp/photo-analysis-new
+
+# 另行确认预算后，在本机终端隐藏输入密钥
+python -B tools/verify_study_live.py run --directory /tmp/photo-analysis-new \
+  --confirm-plan 替换为完整plan_id --max-requests 2 --budget-note 替换为已确认的预算说明
+
+# 查看真实分析后再决定；重复确认不重复保存
+python -B tools/verify_study_live.py decide --directory /tmp/photo-analysis-new --row b01 --accept
+python -B tools/verify_study_live.py decide --directory /tmp/photo-analysis-new --row b02 --reject
+```
+
+本轮拟用原有 `strict_tool` 返回格式约束分析字段，thinking 为 disabled，输出最多 4096 token，超时 60 秒。根据[官方 strict 文档](https://api-docs.deepseek.com/zh-cn/guides/tool_calls/)，该格式使用 `/beta/chat/completions`。实际仍是一轮分析请求，不执行模型选出的工具，也没有自动回退。图片和 strict 组合在本机 HTTP 已覆盖，供应商实际效果待本轮验证；不把格式约束说成教学正确性保证。应用页面默认返回模式不变。
+
+本机完整演练可用两个新目录：
+
+```bash
+python -B -m study.photo_smoke local --directory /tmp/photo-ocr-local-new
+python -B tools/verify_study_live.py local --ocr-from /tmp/photo-ocr-local-new \
+  --output /tmp/photo-analysis-local-new --output-mode strict_tool
+```
+
+这会使用标明来源的手写 HTTP 响应，模拟核对输入、拒绝第二题、接受第一题、重复确认与重新读取。真实请求数为零；模拟决定与质量评分分开。真实结果、用户照片和原始调用报告不进入源码仓库。
