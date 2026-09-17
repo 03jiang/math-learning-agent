@@ -18,21 +18,28 @@
   "learning_outcomes": "not_measured",
   "github_ci": "See GitHub Actions for the public commit; this file records local verification.",
   "latest_offline_verification": {
-    "checked_at": "2026-09-17T16:58:15.943322+00:00",
-    "scope": "Bound answer-only feedback and verify supported numeric steps at generation and new-save boundaries",
-    "application_tests_passed": 457,
-    "elapsed_seconds": 55.33,
-    "new_tests": 20,
+    "checked_at": "2026-09-17T17:25:43.168176+00:00",
+    "scope": "Opt-in bounded read-only agent loop in capture and correction UI",
+    "application_tests_passed": 499,
+    "elapsed_seconds": 62.771,
+    "test_location": "clean allowlisted source export",
+    "working_tree_full_suite_before_last_audit_guard": {
+      "tests_passed": 498,
+      "elapsed_seconds": 66.727
+    },
+    "final_audit_reservation_guard_targeted_tests_passed": 1,
+    "new_tests": 42,
     "real_api_calls": 0,
-    "known_real_replies_rechecked_offline": 2,
-    "known_issues_now_rejected": [
-      "step_quote_incomplete",
-      "answer_only_feedback_not_bounded"
-    ],
-    "original_reports_unchanged": true,
-    "historical_records_readable": true,
-    "new_prompt_live_validation": "not_run",
-    "human_quality_scores": null
+    "exported_files": 142,
+    "local_http_demo_scenarios": 7,
+    "local_http_demo_requests": 10,
+    "protected_existing_private_files_checked": 24,
+    "protected_existing_private_files_changed": 0,
+    "live_tool_selection": "not_run",
+    "current_prompt_live_validation": "not_run",
+    "human_quality_scores": null,
+    "repository_visibility": "private",
+    "pull_request_state": "draft_not_merged"
   },
   "latest_synthetic_ocr_verification": {
     "checked_at": "2026-09-17T09:28:18.010895+00:00",
@@ -99,5 +106,22 @@
     "notebook_rejections": 0,
     "human_quality_scores": null,
     "new_model_calls_for_offline_recheck": 0
+  },
+  "analysis_evidence_offline_verification": {
+    "checked_at": "2026-09-17T16:58:15.943322+00:00",
+    "scope": "Bound answer-only feedback and verify supported numeric steps at generation and new-save boundaries",
+    "application_tests_passed": 457,
+    "elapsed_seconds": 55.33,
+    "new_tests": 20,
+    "real_api_calls": 0,
+    "known_real_replies_rechecked_offline": 2,
+    "known_issues_now_rejected": [
+      "step_quote_incomplete",
+      "answer_only_feedback_not_bounded"
+    ],
+    "original_reports_unchanged": true,
+    "historical_records_readable": true,
+    "new_prompt_live_validation": "not_run",
+    "human_quality_scores": null
   }
 }

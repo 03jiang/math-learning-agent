@@ -60,16 +60,19 @@ def render(notebook,entry):
                   key=kind_key,horizontal=True,on_change=unconfirm,args=(confirm_key,))
     confirmed=st.checkbox('本次作答与作答类型已核对',key=confirm_key)
     current=fingerprint(entry,answer,kind) if answer.strip() else None
-    request_key='correction-v2-'+str(current)+'-'+reply_origin()
+    from study import agent_ui
+    if current: current+=agent_ui.signature(notebook,entry_id)
+    request_key='correction-v3-'+str(current)+'-'+reply_origin()
     if st.button('分析本次订正',type='primary',disabled=not(answer.strip() and confirmed)):
         try:
             with st.spinner('正在核对本次作答与前后变化…'):
-                result=run_once(request_key,lambda:service().reanalyze(entry,answer,work_kind=kind),cache_name='correction_calls')
+                packet=run_once(request_key,lambda:agent_ui.perform(notebook,request_key,'reanalyze',entry,answer,work_kind=kind),cache_name='correction_calls')
             old=drafts.get(entry_id)
-            drafts[entry_id]={'fingerprint':current,'result':result,'based_on':previous['id'],
+            drafts[entry_id]={'fingerprint':current,'result':packet['value'],'agent_run':packet['agent_run'],'based_on':previous['id'],
                 'operation_id':old['operation_id'] if old and old['fingerprint']==current else uuid4().hex,
                 'origin':reply_origin()}
         except (ValueError,OSError) as exc: st.error(str(exc))
+    agent_ui.show_trace(notebook,request_key)
     st.caption('离线回放人工编写的订正对照，不调用模型；确认后才保存到演示错题本。' if demo_enabled() else
                '点击分析才发送本题照片、前后作答和此前分析，可能计费；分析不会自动保存。无需模型时可在下方手动记录复习。')
     pending=drafts.get(entry_id)
@@ -81,13 +84,18 @@ def render(notebook,entry):
         accept,reject=st.columns(2)
         if accept.button('确认保存本次订正',type='primary',disabled=not confirmed):
             try:
-                notebook.add_correction(entry_id,entry['version'],active['operation_id'],based_on=active['based_on'],
+                agent_ui.before_save(notebook,active,active['result'],entry_id)
+                saved_entry=notebook.add_correction(entry_id,entry['version'],active['operation_id'],based_on=active['based_on'],
                     answer=answer,work_kind=kind,result=active['result'],analysis_origin=active['origin'])
+                agent_ui.after_save(notebook,active,saved_entry,active['operation_id'])
                 drafts.pop(entry_id,None)
                 st.session_state['correction-reset-'+entry_id]=True
                 st.rerun()
             except (ValueError,OSError) as exc: st.error(f'没有保存：{exc}')
-        reject.button('不保存本次分析',on_click=discard,args=(entry_id,))
+        reject.button('不保存本次分析',on_click=agent_ui.discard_candidate,
+                      args=(notebook,active,request_key,entry_id))
+    if st.session_state.get('study_agent_action_error'):
+        st.error(st.session_state.pop('study_agent_action_error'))
     cached=st.session_state.get('correction_calls',{}).get(request_key,{})
     if 'error' in cached and st.button('清除此订正的失败记录'):
         st.session_state.correction_calls.pop(request_key,None)

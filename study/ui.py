@@ -211,14 +211,18 @@ def render_capture(notebook):
         st.caption('核对范围包括题干、图形、原作答及作答类型。修改任一作答内容后需要重新勾选。')
         confirmed=st.checkbox('题干与图形条件已核对',key='photo_confirmed')
         current=fingerprint(question,level,my_work,image,work_kind,work_image=work_image)
+        from study import agent_ui
+        current+=agent_ui.signature(notebook)
+        key='analysis-v4-'+entry_id+'-'+current+'-'+st.session_state.get('photo_model','')
         if st.button('分析这道题',type='primary',disabled=not(question.strip() and confirmed)):
-            key='analysis-v3-'+current+'-'+st.session_state.get('photo_model','')
             try:
                 with st.spinner('正在分析思路与解题步骤…'):
-                    result=run_once(key,lambda:service().analyze(question,level,my_work,image,work_kind=work_kind,work_image=work_image))
-                st.session_state.photo_analysis={'fingerprint':current,'value':result,
-                                                'origin':reply_origin()}
+                    packet=run_once(key,lambda:agent_ui.perform(notebook,key,'analyze',question,level,my_work,image,
+                                                              work_kind=work_kind,work_image=work_image))
+                st.session_state.photo_analysis={'fingerprint':current,'value':packet['value'],
+                                                'agent_run':packet['agent_run'],'origin':reply_origin()}
             except (ValueError,OSError) as exc: st.error(str(exc))
+        agent_ui.show_trace(notebook,key)
         st.caption('当前只回放人工编写的固定示例，不发送图片或文字。' if demo_enabled() else
                    '分析会发送本题文字、作答和附图给 DeepSeek。未配置密钥时，可先手动整理并收藏。')
         if not demo_enabled() and not(st.session_state.get('photo_api_key') or os.environ.get('DEEPSEEK_API_KEY')):
@@ -229,6 +233,9 @@ def render_capture(notebook):
         if active:
             st.success('已分析 · 可以对照步骤整理错因')
             show_analysis(active['value'],example=active['origin']==DEMO_ORIGIN)
+            st.button('放弃这次分析',on_click=agent_ui.discard_candidate,args=(notebook,active,key))
+        if st.session_state.get('study_agent_action_error'):
+            st.error(st.session_state.pop('study_agent_action_error'))
         failed=[key for key,value in st.session_state.photo_calls.items() if 'error' in value]
         if failed and st.button('清除失败记录，允许重新点击请求'):
             for key in failed: del st.session_state.photo_calls[key]
@@ -245,12 +252,14 @@ def render_capture(notebook):
         saved=st.form_submit_button('确认加入错题本',type='primary',disabled=not(question.strip() and confirmed))
     if saved:
         try:
+            if active: agent_ui.before_save(notebook,active,active['value'])
             from study.transcription import confirm
             transcription=confirm(observation,question,my_work,work_kind,image,work_image) if observation else None
             entry=make_entry(entry_id,question=question,level=level,my_work=my_work,topic=topic,reason=reason,
                 correction=correction,image=image,work_image=work_image,analysis=active['value'] if active else None,
                 analysis_origin=active['origin'] if active else '手动整理（没有模型分析）',transcription=transcription)
             notebook.save_new(entry)
+            if active: agent_ui.after_save(notebook,active,notebook.get(entry_id))
             st.session_state.photo_saved=True
             st.rerun()
         except (ValueError,OSError) as exc: st.error(f'没有保存：{exc}')
@@ -407,6 +416,8 @@ def render_summary(entries):
 def render(directory,view):
     notebook=Notebook(directory)
     entries,errors=notebook.list()
+    if st.session_state.get('study_agent_save_notice'):
+        st.warning(st.session_state.pop('study_agent_save_notice'))
     with st.sidebar:
         st.title('🌱 数学学习工作台')
         st.caption('小学 · 初中 · 高中\n\n自己的题目，自己的复习记录。')
@@ -419,6 +430,12 @@ def render(directory,view):
             if offline: st.info('当前为离线演示入口，DeepSeek 请求已关闭。')
             elif os.environ.get('DEEPSEEK_API_KEY'): st.caption('已从启动环境载入密钥。')
             st.button('清除会话密钥',on_click=clear_key)
+        with st.expander('辅助资料（实验）'):
+            st.checkbox('让模型按需查资料',key='study_agent_enabled',disabled=offline)
+            st.checkbox('允许查询已收藏错题',key='study_agent_history',
+                        disabled=offline or not st.session_state.get('study_agent_enabled'))
+            st.caption('默认关闭；仅本次会话生效。启用后，每次分析或订正最多 4 次模型请求、3 次只读工具请求，可能增加费用。')
+            st.caption('历史关闭时不发送其他错题。执行记录保存在本机；收藏仍由你确认。')
         st.caption('照片只在确认收藏后写入本地错题本。摄像头需浏览器授权。')
     for error in errors: st.warning(error)
     if view=='拍照解题': render_capture(notebook)
