@@ -83,20 +83,87 @@ def select_rows(rows, row_ids=None):
     return selected
 
 
-def create_run(output, *, mode='real_api', config=None, row_ids=None, output_mode='json_object'):
+def confirmed_source(directory, row_id, mode):
+    """只读核对原计划、用户决定及版本 1 存档，不续跑或改写原账本。"""
+    source = RunAudit(directory)
+    if row_id not in source.rows or source.rows[row_id]['operation'] != 'analyze':
+        raise AuditError('复用来源必须是原分析。')
+    row = source.row(row_id)
+    decision = row.get('decision') if row else None
+    if (not row or row['status'] != 'reply_valid' or not decision
+            or decision['action'] != 'accept' or decision['saved_version'] != 1
+            or not decision['reopen_verified'] or digest(row['result']) != row['result_hash']
+            or row['payload'] != source.rows[row_id]['payload']
+            or row['request_hash'] != digest(row['payload'])):
+        raise AuditError('来源未确认保存，或记录不一致。')
+    if mode == 'real_api' and (source.manifest['execution_mode'] != 'real_api'
+            or row['mode'] != 'real_api' or decision['actor'] != 'user'
+            or row['call']['kind'] != 'real_api' or row['call']['status'] != 'ok'):
+        raise AuditError('真实订正只能复用用户确认的真实分析。')
+    context = source.rows[row_id]['context']
+    validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'])
+    origin = ('DeepSeek / ' + source.manifest['config']['model'])[:100] if row['mode'] == 'real_api' else '本机 HTTP 手写响应（非模型）'
+    expected = make_entry(entry_id(source, row_id), question=context['confirmed_question'],
+        level=context['school_level'], my_work=context['student_work'], topic=row['result']['topic'],
+        analysis=row['result'], analysis_origin=origin)
+    expected['created_at'] = expected['updated_at'] = row['finished_at']
+    book = notebook(source)
+    entry = book.get(decision['entry_id'])
+    if entry != expected:
+        raise AuditError('来源存档已变更，或与已确认原分析不符。')
+    paths = [source.directory / 'manifest.json', source.path(row_id), book.path(entry['id'])]
+    return {'directory': str(source.directory), 'plan_id': source.manifest['plan_id'],
+        'row_id': row_id, 'entry': entry,
+        'artifact_hashes': {p.relative_to(source.directory).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                            for p in paths}}
+
+
+def reused_correction(rows, directory, row_ids, mode, config, output_mode):
+    if type(row_ids) is not list or len(row_ids) != 1:
+        raise AuditError('复用存档时必须只选一条订正。')
+    selected = [r for r in rows if r['row_id'] == row_ids[0] and r['operation'] == 'reanalyze']
+    if len(selected) != 1:
+        raise AuditError('复用存档只支持订正请求。')
+    row = selected[0]
+    source = confirmed_source(directory, row['depends_on'], mode)
+    original = next(r for r in rows if r['row_id'] == row['depends_on'])['context']
+    entry = source['entry']
+    if (entry['question'], entry['level'], entry['my_work']) != (
+            original['confirmed_question'], original['school_level'], original['student_work']):
+        raise AuditError('来源题目或原作答与本次案例不一致。')
+    row = {**row, 'depends_on': None,
+        'payload_dependency': '只读复用 parent_source 中用户已确认的原分析；不重发分析请求',
+        'payload': build_payload(config, CORRECTION_PROMPT,
+            correction_context(entry, row['context']['student_work'], work_kind=row['context']['student_work_kind']),
+            output_mode=output_mode, operation='reanalyze')}
+    return [row], source
+
+
+def verify_source(audit):
+    frozen = audit.manifest['parent_source']
+    current = confirmed_source(frozen['directory'], frozen['row_id'], audit.manifest['execution_mode'])
+    if current != frozen:
+        raise AuditError('复用来源已变化，未请求或保存；请重新核对。')
+    return current['entry']
+
+
+def create_run(output, *, mode='real_api', config=None, row_ids=None, output_mode='json_object', reuse_from=None):
     if mode not in ('real_api', 'local_http_test'):
         raise AuditError('未知运行模式。')
     config = config or default_config()
     if (config.mode, config.provider, config.api_format) != ('api', 'deepseek', 'chat_completions'):
         raise AuditError('文字验证使用 DeepSeek Chat Completions 配置。')
     provider_endpoint = endpoint(config, output_mode)
-    selected = select_rows(make_rows(config, output_mode), row_ids)
+    rows = make_rows(config, output_mode)
+    selected, source = (reused_correction(rows, reuse_from, row_ids, mode, config, output_mode)
+                        if reuse_from is not None else (select_rows(rows, row_ids), None))
     audit = RunAudit.create(output, {'schema_version': 1, 'suite': 'study-text-smoke-v1',
         'execution_mode': mode, 'code': source_snapshot(), 'config': asdict(config),
         'output_mode': output_mode, 'provider_endpoint': provider_endpoint,
         'output_contract': CONTRACT_VERSION if output_mode == 'strict_tool' else 'json-object-v1',
         'prompt_versions': {'analyze': ANALYSIS_PROMPT_VERSION, 'reanalyze': CORRECTION_PROMPT_VERSION},
         'row_selection': [row['row_id'] for row in selected],
+        **({'parent_source': source} if source else {}),
         'rows': selected, 'planned_requests': len(selected), 'real_requests_on_preview': 0,
         'cost_estimate_cny': None, 'human_scoring': '未评分'})
     write_json(audit.directory / 'review.json', {'label': '人工检查表；空白为未评，不是 0 分',
@@ -118,7 +185,15 @@ def verify_frozen(audit, *, live=False):
     if (audit.manifest.get('provider_endpoint') != endpoint(config, output_mode)
             or audit.manifest.get('output_contract') != expected_contract):
         raise AuditError('返回格式或供应商地址与当前实现不符。')
-    if select_rows(make_rows(config, output_mode), audit.manifest.get('row_selection')) != list(audit.rows.values()):
+    if 'parent_source' in audit.manifest:
+        selected, source = reused_correction(make_rows(config, output_mode),
+            audit.manifest['parent_source']['directory'], audit.manifest.get('row_selection'),
+            audit.manifest['execution_mode'], config, output_mode)
+        if source != audit.manifest['parent_source']:
+            raise AuditError('复用来源已改变。')
+    else:
+        selected = select_rows(make_rows(config, output_mode), audit.manifest.get('row_selection'))
+    if selected != list(audit.rows.values()):
         raise AuditError('案例或请求与当前实现不符。')
     if live and (not current['commit'] or current['dirty']):
         raise AuditError('真实验证需要干净的 Git 提交，请先提交并重新预览。')
@@ -138,6 +213,8 @@ def notebook(audit):
 def prepare(audit, row):
     if row['operation'] == 'analyze':
         return None, row['payload']
+    if 'parent_source' in audit.manifest:
+        return verify_source(audit), row['payload']
     parent = audit.row(row['depends_on'])
     if not parent or not parent['decision'] or parent['decision']['action'] != 'accept':
         return None, None
@@ -244,14 +321,17 @@ def decide(audit, row_id, action, *, actor='user'):
                 book.save_new(entry)
                 saved = book.get(entry['id'])
             else:
-                parent_id = entry_id(audit, planned['depends_on'])
+                initial = verify_source(audit) if 'parent_source' in audit.manifest else None
+                if initial is not None and row['payload'] != planned['payload']:
+                    raise AuditError('订正请求与冻结预览不符，未保存。')
+                parent_id = initial['id'] if initial else entry_id(audit, planned['depends_on'])
                 previous_context = json.loads(row['payload']['messages'][1]['content'][0]['text'])
                 validate_result(row['result'], previous_work=previous_context['previous_student_work'],
                     previous_analysis=previous_context['previous_analysis'], answer=context['student_work'],
                     work_kind=context['student_work_kind'])
                 saved = book.add_correction(parent_id, 1, entry_id(audit, row_id), based_on='original',
                     answer=context['student_work'], work_kind=context['student_work_kind'], result=row['result'],
-                    analysis_origin=origin)
+                    analysis_origin=origin, initial_entry=initial)
             if saved != Notebook(book.directory).get(saved['id']):
                 raise AuditError('重新读取与保存结果不一致。')
         row['decision'] = {'action': action, 'actor': actor, 'at': stamp(),
@@ -284,5 +364,11 @@ def report(audit):
               'Notebook 仅写入本报告目录的 notebook/；不修改应用中的私人错题本。',
               '订正的 previous_analysis 要等原分析真实返回且用户确认后才可确定；预览不使用固定回复补齐。',
               '失败或完成情况未知会停止整个计划；没有自动重试。恢复读取不等于再次发送请求。', '']
+    if 'parent_source' in audit.manifest:
+        source = audit.manifest['parent_source']
+        lines += [f"复用来源：计划 `{source['plan_id']}` 的 `{source['row_id']}`；原目录只读。",
+            'parent_source 冻结来源文件哈希和已确认存档，订正 payload 已完整预览。',
+            '只有确认本次订正后，才将原记录与新订正一次写入本计划 notebook；拒绝不创建错题本。',
+            '复用不计为本计划的模型调用或新分析保存。原计划中的失败记录保持原样。', '']
     (audit.directory / 'review.md').write_text('\n'.join(lines))
     return state

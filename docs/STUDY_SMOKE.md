@@ -66,6 +66,23 @@ python tools/verify_study_live.py decide --directory evaluation_runs/study-previ
 
 ## 看哪些记录
 
+### 只复测订正：复用已确认的真实原分析
+
+若旧计划的原分析已由用户确认保存，但后续订正失败，可只读复用原分析另建一条订正预览：
+
+```bash
+python tools/verify_study_live.py preview --output evaluation_runs/correction-only-001 \
+  --reuse-from evaluation_runs/old-confirmed-run --rows b06 --output-mode strict_tool
+```
+
+这不是续跑失败计划。`parent_source` 冻结来源计划编号、原回复、用户接受决定、版本 1 存档及文件哈希；题目和原作答必须与该订正案例匹配。只接受仍未改动的原分析，本版不复用已有后续订正的版本。真实模式不能复用本机模拟回复。预览已含完整订正 payload，人工参考答案不进入请求。
+
+真实发送前仍需另行确认**新计划的 1 次请求与预算**，使用新 plan_id；运行方法与上文相同，`--max-requests 1`。旧计划的失败行和调用次数保持原样。新计划只统计本次订正，不把复用分析算作新模型调用。
+
+未确认或拒绝时不创建新 Notebook。用户接受订正后，原分析副本与订正使用同一个原子写入保存到**新计划的 notebook/**；旧计划目录始终只读。来源在预览后被修改、结果过期或证据非法时拒绝发送/保存。重复确认以及保存后决定日志中断的重放，不会追加第二条订正，也不标记掌握。新的 Python 进程可重新读取整条记录。
+
+这一复用入口已通过本机 HTTP、真实来源只读核对和自动测试；新的真实订正尚待另行执行及用户确认。不能把本机模拟闭环计作真实验收。
+
 | 文件 | 内容 |
 |---|---|
 | `manifest.json` | 提交与源码指纹、参数、版本、7 行计划；plan_id 冻结整份计划 |

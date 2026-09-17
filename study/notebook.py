@@ -218,13 +218,23 @@ class Notebook:
             self.write(entry)
             return entry
 
-    def add_correction(self,entry_id,version,operation_id,*,based_on,answer,work_kind,result,analysis_origin):
+    def add_correction(self,entry_id,version,operation_id,*,based_on,answer,work_kind,result,analysis_origin,
+                       initial_entry=None):
         if type(operation_id) is not str or not ID.fullmatch(operation_id):
             raise ValueError('订正操作编号无效。')
         text(answer,'本次订正',3000,True)
         from study.corrections import baseline
+        if initial_entry is not None:
+            validate_entry(initial_entry)
+            if initial_entry['id'] != entry_id or initial_entry['version'] != 1:
+                raise ValueError('复用原记录编号或版本无效。')
         with self.locked():
-            entry=self.get(entry_id)
+            if (initial_entry is not None and not self.path(entry_id).exists()
+                    and not self.path(entry_id).is_symlink()):
+                # 只在用户确认后复制；原记录和订正合成后一次原子写入。
+                entry=deepcopy(initial_entry)
+            else:
+                entry=self.get(entry_id)
             ensure_active(entry)
             if operation_id in entry['operation_ids']:
                 existing=next((r for r in entry.get('corrections',[]) if r['id']==operation_id),None)
@@ -233,6 +243,8 @@ class Notebook:
                 if not existing or any(existing[k]!=v for k,v in expected.items()):
                     raise ValueError('该操作编号已用于不同内容，未修改。')
                 return entry
+            if initial_entry is not None and entry != initial_entry:
+                raise ValueError('目的存档与复用原记录不同，未覆盖。')
             if type(version) is not int or entry['version']!=version or baseline(entry)['id']!=based_on:
                 raise ValueError('本题或对照作答已更新，请重新核对并分析。')
             text(answer,'本次订正',3000,True)

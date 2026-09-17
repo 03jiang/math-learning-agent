@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 from uuid import uuid4
@@ -16,6 +18,167 @@ from study.smoke import (create_run, default_config, execute, decide, notebook, 
                          verify_frozen)
 from study.service import StudyService, PhotoTransport
 from tools.verify_study_live import run_local, local_fixture, main
+
+
+class ReusedCorrectionTests(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve()
+        self.source = create_run(self.root/'source', mode='local_http_test', row_ids=['b02'],
+                                 output_mode='strict_tool')
+        self.server = self.enterContext(LocalModelServer())
+        self.server.body = local_fixture(self.source)
+        execute(self.source, server=self.server)
+        decide(self.source, 'b02', 'accept', actor='local_fixture')
+        self.original = self.bytes(self.source.directory)
+
+    def bytes(self, directory):
+        return {str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+
+    def reuse(self, name='reuse', **kwargs):
+        return create_run(self.root/name, mode='local_http_test', row_ids=['b06'],
+                          output_mode='strict_tool', reuse_from=self.source.directory, **kwargs)
+
+    def reply(self, audit):
+        self.server.body = local_fixture(audit)
+        return execute(audit, server=self.server)
+
+    def test_preview_freezes_confirmed_original_and_exact_request_without_save_or_call(self):
+        with patch('study.service.PhotoTransport.send', side_effect=AssertionError('must not send')):
+            audit = self.reuse()
+        verify_frozen(audit)
+        self.assertEqual(['b06'], list(audit.rows))
+        self.assertEqual(1, audit.manifest['planned_requests'])
+        self.assertEqual(0, audit.status()['reserved_attempts'])
+        self.assertFalse(notebook(audit).directory.exists())
+        payload = audit.rows['b06']['payload']
+        context = json.loads(payload['messages'][1]['content'][0]['text'])
+        self.assertEqual(self.source.row('b02')['result'], context['previous_analysis'])
+        self.assertNotIn('human_reference', context)
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+
+    def test_single_call_waits_for_confirmation_then_atomic_save_duplicate_and_new_process(self):
+        audit = self.reuse()
+        self.assertEqual(1, self.reply(audit)['counts']['reply_valid'])
+        self.assertFalse(notebook(audit).directory.exists())
+        self.assertEqual(audit.rows['b06']['payload'], self.server.requests[-1]['payload'])
+        execute(RunAudit(audit.directory), server=self.server)
+        self.assertEqual(2, len(self.server.requests))  # source analysis + exactly one correction
+        saved = decide(audit, 'b06', 'accept', actor='local_fixture')
+        entry = notebook(audit).get(saved['entry_id'])
+        self.assertEqual(2, entry['version'])
+        self.assertEqual(1, len(entry['corrections']))
+        self.assertEqual([], entry['reviews'])
+        self.assertEqual(self.source.row('b02')['result'], entry['analysis'])
+        once = self.bytes(notebook(audit).directory)
+        decide(RunAudit(audit.directory), 'b06', 'accept', actor='local_fixture')
+        self.assertEqual(once, self.bytes(notebook(audit).directory))
+        reopened = subprocess.check_output([sys.executable, '-B', '-c',
+            'import json,sys; from study.notebook import Notebook; '
+            'print(json.dumps(Notebook(sys.argv[1]).get(sys.argv[2])))',
+            str(notebook(audit).directory), saved['entry_id']], text=True,
+            cwd=Path(__file__).resolve().parent)
+        self.assertEqual(entry, json.loads(reopened))
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+
+    def test_rejection_never_creates_destination_or_changes_source(self):
+        audit = self.reuse(); self.reply(audit)
+        decide(audit, 'b06', 'reject', actor='local_fixture')
+        self.assertFalse(notebook(audit).directory.exists())
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+        with self.assertRaises(ValueError): decide(audit, 'b06', 'accept')
+
+    def test_unconfirmed_rejected_tampered_or_stale_source_cannot_create_plan(self):
+        source_row = self.source.row('b02')
+        for decision in (None, {**source_row['decision'], 'action': 'reject'}):
+            with self.source.locked(): self.source.put('b02', {**source_row, 'decision': decision})
+            with self.assertRaises(ValueError): self.reuse()
+            self.assertFalse((self.root/'reuse').exists())
+        changed = deepcopy(source_row); changed['result']['answer'] = 'tampered'
+        with self.source.locked(): self.source.put('b02', changed)
+        with self.assertRaises(ValueError): self.reuse()
+        with self.source.locked(): self.source.put('b02', source_row)
+        notebook(self.source).update(entry_id(self.source, 'b02'), 1, uuid4().hex,
+            edit={'topic':'分数', 'reason':'尚不确定', 'correction':'已修改'})
+        with self.assertRaises(ValueError): self.reuse()
+        self.assertFalse((self.root/'reuse').exists())
+
+    def test_source_change_after_preview_or_reply_blocks_send_and_save(self):
+        audit = self.reuse(); self.reply(audit)
+        pending = self.reuse('pending')
+        notebook(self.source).update(entry_id(self.source, 'b02'), 1, uuid4().hex,
+            edit={'topic':'分数', 'reason':'尚不确定', 'correction':'已修改'})
+        before = self.bytes(self.source.directory)
+        with self.assertRaises(ValueError): execute(pending, server=self.server)
+        with self.assertRaises(ValueError): decide(audit, 'b06', 'accept')
+        self.assertEqual(2, len(self.server.requests))
+        self.assertFalse(notebook(audit).directory.exists())
+        self.assertEqual(before, self.bytes(self.source.directory))
+
+    def test_local_source_cannot_be_relabelled_as_real(self):
+        with self.assertRaises(ValueError):
+            create_run(self.root/'real', mode='real_api', row_ids=['b06'], reuse_from=self.source.directory)
+        self.assertFalse((self.root/'real').exists())
+
+    def test_failed_old_correction_does_not_block_reusing_confirmed_parent(self):
+        source = create_run(self.root/'failed-source', mode='local_http_test', row_ids=['b02','b06'])
+        self.server.body = local_fixture(source)
+        execute(source, server=self.server)
+        decide(source, 'b02', 'accept', actor='local_fixture')
+        self.server.body = {'choices':[{'finish_reason':'stop','message':{'content':'{broken'}}]}
+        execute(source, server=self.server)
+        before = self.bytes(source.directory)
+        audit = create_run(self.root/'after-failure', mode='local_http_test', row_ids=['b06'],
+                           reuse_from=source.directory, output_mode='strict_tool')
+        self.assertEqual(1, self.reply(audit)['counts']['reply_valid'])
+        self.assertEqual(before, self.bytes(source.directory))
+        self.assertEqual('failed', RunAudit(source.directory).row('b06')['status'])
+
+    def test_reuse_requires_one_correction_and_cli_rejects_runtime_source_changes(self):
+        for rows in (None, ['b02'], ['b02','b06'], ['b06','b07'], ['b99']):
+            with self.assertRaises(ValueError):
+                create_run(self.root/'invalid', mode='local_http_test', row_ids=rows, reuse_from=self.source.directory)
+            self.assertFalse((self.root/'invalid').exists())
+        self.assertEqual(2, main(['run', '--directory', str(self.source.directory),
+                                 '--reuse-from', str(self.source.directory)]))
+
+    def test_expired_or_modified_correction_cannot_write_either_notebook(self):
+        audit = self.reuse(); self.reply(audit)
+        row = audit.row('b06')
+        altered = deepcopy(row); altered['result']['comparison']['summary'] = 'tampered'
+        with audit.locked(): audit.put('b06', altered)
+        with self.assertRaises(ValueError): decide(audit, 'b06', 'accept')
+        row['finished_at'] = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+        with audit.locked(): audit.put('b06', row)
+        with self.assertRaises(ValueError): decide(audit, 'b06', 'accept')
+        self.assertFalse(notebook(audit).directory.exists())
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+
+    def test_failed_response_stops_without_retry_or_notebook(self):
+        audit = self.reuse()
+        self.server.body = {'choices':[{'finish_reason':'stop','message':{'content':'{}'}}]}
+        self.assertEqual(1, execute(audit, server=self.server)['counts']['failed'])
+        with self.assertRaises(ValueError): execute(RunAudit(audit.directory), server=self.server)
+        with self.assertRaises(ValueError): decide(audit, 'b06', 'accept')
+        self.assertEqual(2, len(self.server.requests))
+        self.assertFalse(notebook(audit).directory.exists())
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+
+    def test_atomic_write_failure_does_not_leave_a_copied_parent(self):
+        audit = self.reuse(); self.reply(audit)
+        with patch('study.notebook.os.replace', side_effect=OSError('disk failure')):
+            with self.assertRaises(OSError): decide(audit, 'b06', 'accept')
+        self.assertEqual([], list(notebook(audit).directory.glob('*.json')))
+        self.assertIsNone(audit.row('b06')['decision'])
+        self.assertEqual(self.original, self.bytes(self.source.directory))
+
+    def test_saved_then_audit_failure_replays_without_duplicate_correction(self):
+        audit = self.reuse(); self.reply(audit)
+        with patch.object(audit, 'put', side_effect=OSError('audit failure')):
+            with self.assertRaises(OSError): decide(audit, 'b06', 'accept')
+        before = self.bytes(notebook(audit).directory)
+        decide(RunAudit(audit.directory), 'b06', 'accept')
+        self.assertEqual(before, self.bytes(notebook(audit).directory))
+        self.assertEqual(self.original, self.bytes(self.source.directory))
 
 
 class StudySmokeTests(unittest.TestCase):

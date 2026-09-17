@@ -80,6 +80,8 @@ def main(argv=None):
     parser.add_argument('--directory', type=Path, help='继续读取的已有运行目录')
     parser.add_argument('--config', type=Path, help='预览或本机演练时冻结的无密钥配置')
     parser.add_argument('--rows', nargs='+', help='仅 preview 可用：选定请求编号，例如 b01 b02 b03；默认完整 7 次')
+    parser.add_argument('--reuse-from', type=Path,
+                        help='仅 preview：只读复用已确认原分析的报告目录，--rows 必须仅指定一条订正')
     parser.add_argument('--output-mode', choices=OUTPUT_MODES,
                         help='仅 preview/local 可用；默认 json_object；strict_tool 为 Beta 单次强制函数返回格式')
     parser.add_argument('--row', help='例如 b02')
@@ -93,6 +95,8 @@ def main(argv=None):
     try:
         if args.rows is not None and args.action != 'preview':
             raise AuditError('请求范围只能在 preview 时选择，运行时不能修改。')
+        if args.reuse_from is not None and args.action != 'preview':
+            raise AuditError('复用来源只能在 preview 时冻结。')
         if args.output_mode is not None and args.action not in ('preview', 'local'):
             raise AuditError('返回格式已冻结，运行时不能切换或回退。')
         if args.action in ('preview', 'local'):
@@ -100,7 +104,8 @@ def main(argv=None):
                 raise AuditError('请提供新的 --output 目录。')
             config = load_model_config(args.config) if args.config else None
             output_mode = args.output_mode or 'json_object'
-            result = (report(create_run(args.output, config=config, row_ids=args.rows, output_mode=output_mode))
+            result = (report(create_run(args.output, config=config, row_ids=args.rows, output_mode=output_mode,
+                                       reuse_from=args.reuse_from))
                       if args.action == 'preview' else run_local(args.output, config, output_mode))
         else:
             if args.directory is None or args.output is not None or args.config is not None:
