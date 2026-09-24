@@ -13,6 +13,7 @@
 | 存储 | `study/notebook.py` | 每题 JSON、版本、操作 ID、文件锁、原子替换、旧存档兼容 |
 | 演示 | `study/demo_service.py` | 严格匹配固定题，不把手写响应冒充模型效果 |
 | 对照评估 | `study/evaluation.py`、`study/evaluation_baseline.py`、`study/evaluation_scoring.py` | 题目家族隔离、参考答案不入请求、实际信息与次数留痕；当前只有离线执行，无自动评分 |
+| 开发集执行账本 | `study/evaluation_live.py`、`tools/evaluate_agent_live.py` | 独立真实入口需明确批准；发送前预留次数/估算金额；失败不续跑、不自动写学习状态；当前仅离线验证 |
 
 原作答与原分析保持不变，每次确认订正追加一条记录。“已订正”需引用旧分析中的错误步骤及新分析中的正确步骤；引用校验不能证明数学语义成立。`reviews` 是用户自评，保存模型对照不会自动增加“独立做对”或掌握标签。
 

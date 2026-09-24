@@ -77,9 +77,15 @@ def score_report(directory):
     directory = Path(directory)
     manifest = read_json(directory / 'manifest.json')
     # Reporting deliberately works after code changes; frozen input identities must still match.
-    reliability = report(directory)
-    results = {r['row_id']: read_json(directory / 'rows' / (r['row_id'] + '.json'))
-               for r in manifest['rows'] if (directory / 'rows' / (r['row_id'] + '.json')).exists()}
+    from study.evaluation_live import SUITE, EvaluationPlan
+    if manifest.get('suite') == SUITE:
+        plan = EvaluationPlan(directory)
+        reliability = plan.status()
+        results = {row_id: row for row_id in plan.rows if (row := plan.row(row_id)) is not None}
+    else:
+        reliability = report(directory)
+        results = {r['row_id']: read_json(directory / 'rows' / (r['row_id'] + '.json'))
+                   for r in manifest['rows'] if (directory / 'rows' / (r['row_id'] + '.json')).exists()}
     output = {'reliability': reliability, 'human_scoring': summarize(manifest, read_json(directory / 'scores.json'), results)}
     write_json(directory / 'scoring-summary.json', output)
     return output

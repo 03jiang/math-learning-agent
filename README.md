@@ -61,6 +61,7 @@ python -m study.launch --demo
 - [学习设置、同题追问与上下文预算](docs/CONTEXT.md)
 - [五场景真实联调计划与预算边界](docs/AGENT_LIVE.md)
 - [30 条新用例、题目家族划分与 A/B 离线评估](evaluation/agent_ab_v1/PLAN.md)
+- [开发集真实执行账本、预算预览与隐藏输入](docs/AB_LIVE.md)
 - [实际验证、证据分级与待办](docs/STATUS.md)
 - [简历条目与面试准备](portfolio/APPLICATION_PACK.md)
 

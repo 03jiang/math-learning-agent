@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "model": "deepseek-flash",
+  "currency": "CNY",
+  "checked_on": "2026-09-24",
+  "valid_days": 7,
+  "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+  "api_source": "https://api-docs.deepseek.com/api/create-chat-completion/",
+  "peak_input_miss_per_million": "2",
+  "peak_output_per_million": "8",
+  "assumptions": "Use peak rates and no cache discount. Estimate input tokens as UTF-8 payload bytes plus 1024 protocol tokens; this is not a tokenizer or a provider billing cap. Actual billed cost remains unknown."
+}
