@@ -60,6 +60,7 @@ python -m study.launch --demo
 - [工具循环、零密钥演练与关键代码](docs/AGENT_LOOP.md)
 - [学习设置、同题追问与上下文预算](docs/CONTEXT.md)
 - [五场景真实联调计划与预算边界](docs/AGENT_LIVE.md)
+- [30 条新用例、题目家族划分与 A/B 离线评估](evaluation/agent_ab_v1/PLAN.md)
 - [实际验证、证据分级与待办](docs/STATUS.md)
 - [简历条目与面试准备](portfolio/APPLICATION_PACK.md)
 
@@ -77,6 +78,7 @@ python -m unittest discover -v
 | `test_*.py` | 核心、页面、HTTP、持久化与发布边界测试 |
 | `evaluation/photo_cases_v1/` | 13 张程序排版的自写题，评分为空；不是实际学生照片 |
 | `evaluation/`、`prompts/` | 原四题模块的成对提示词评估脚手架 |
+| `evaluation/agent_ab_v1/` | 新30用例、15题目家族；固定流程与工具循环对照，人工评分为空 |
 | `docs/`、`portfolio/` | 产品说明、演示、验收边界与求职材料 |
 | `tools/export_public.py` | 按明确清单生成公开源码，排除个人存档与运行报告 |
 
