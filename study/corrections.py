@@ -72,13 +72,13 @@ def excerpt_has_verdict(analysis,excerpt,verdict,student_work):
     return all(unsupported[start+len(quote)]==unsupported[start] for start in positions(quote))
 
 
-def validate_result(value,*,previous_work,previous_analysis,answer,work_kind,allow_legacy=False):
+def validate_result(value,*,previous_work,previous_analysis,answer,work_kind,question=None,allow_legacy=False):
     object_fields(value,{'schema_version','analysis','comparison'})
     if type(value['schema_version']) is not int or value['schema_version']!=1:
         raise ValueError('订正分析版本无效。')
     text(answer,'订正作答',3000,True)
     work_kind_for(answer,work_kind)
-    current=validate_analysis(value['analysis'],student_work=answer,work_kind=work_kind,allow_legacy=allow_legacy)
+    current=validate_analysis(value['analysis'],student_work=answer,work_kind=work_kind,question=question,allow_legacy=allow_legacy)
     comparison=value['comparison']
     object_fields(comparison,{'summary','changes'})
     text(comparison['summary'],'前后变化总结',2000,True)

@@ -18,6 +18,12 @@ VALIDATION_ISSUES = {
     'step_quote_incomplete': '步骤引用缺少等号一侧，需引用完整变形后再判断。',
     'step_mixed_equalities': '引用混合了成立与不成立的数值等式，请分开逐步判断。',
     'step_arithmetic_verdict_mismatch': '步骤判断与受限数值等式检查冲突；不能因最终答案错误而否定成立的局部运算。',
+    'step_equation_verdict_mismatch': '步骤判断与已核对题目的一元一次方程等价变形检查冲突。',
+    'analysis_summary_required': '解答需要简短思路。',
+    'analysis_next_practice_required': '解答需要自检问题。',
+    'clarification_required': '信息不足时应先询问，不能给出确定答案。',
+    'clarification_contains_answer': '信息不足时应先询问，不能给出确定答案。',
+    'clarification_contains_solution': '条件缺失时先澄清，不输出确定解法或学生错因。',
 }
 
 
@@ -53,19 +59,23 @@ def work_kind_for(student_work, work_kind=None):
     return kind
 
 
-def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=False):
+def validate_analysis(value, *, student_work=None, work_kind=None, question=None, allow_legacy=False):
     legacy = type(value) is dict and set(value) == LEGACY_FIELDS
     object_fields(value, LEGACY_FIELDS if legacy and allow_legacy else FIELDS)
     if value['status'] not in ('solved','needs_clarification'):
         raise ValueError('分析状态无效。')
-    for field in LEGACY_FIELDS-{'status','steps','error_analysis'}:
-        text(value[field],field,80 if field=='topic' else 4000,field in ('topic','summary'))
-    for step in rows(value['steps'],12,'参考步骤'): text(step,'参考步骤',1500,True)
     solved = value['status'] == 'solved'
+    for field in LEGACY_FIELDS-{'status','steps','error_analysis'}:
+        text(value[field],field,80 if field=='topic' else 4000,field == 'topic')
+    if solved and not value['summary'].strip():
+        raise AnalysisValidationError('analysis_summary_required')
+    for step in rows(value['steps'],12,'参考步骤'): text(step,'参考步骤',1500,True)
     if solved and (not value['steps'] or not value['answer'].strip() or value['clarification'].strip()):
         raise ValueError('解答缺少步骤或答案，或包含未解决的澄清。')
-    if not solved and (not value['clarification'].strip() or value['answer'].strip()):
-        raise ValueError('信息不足时应先询问，不能给出确定答案。')
+    if not solved and not value['clarification'].strip():
+        raise AnalysisValidationError('clarification_required')
+    if not solved and value['answer'].strip():
+        raise AnalysisValidationError('clarification_contains_answer')
     if legacy:
         text(value['error_analysis'],'旧作答分析',4000)
         return value
@@ -76,7 +86,9 @@ def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=
     if len(set(points)) != len(points) or (solved and not points):
         raise ValueError('知识点重复或缺失。')
     text(value['takeaway'],'归纳方法',1500,solved)
-    text(value['next_practice'],'自检问题',4000,True)
+    text(value['next_practice'],'自检问题',4000)
+    if solved and not value['next_practice'].strip():
+        raise AnalysisValidationError('analysis_next_practice_required')
     review=value['student_review']
     object_fields(review, {'work_kind','verdict','observed_approach','answer_feedback','comparisons'},
                   issue='student_review_fields')
@@ -134,10 +146,10 @@ def validate_analysis(value, *, student_work=None, work_kind=None, allow_legacy=
         text(item['check_question'],'核对问题',1000,True)
     if not solved and (value['steps'] or diagnoses or comparisons or review['observed_approach'].strip()
                        or (kind!='none' and review['verdict']!='uncertain')):
-        raise ValueError('条件缺失时先澄清，不输出确定解法或学生错因。')
+        raise AnalysisValidationError('clarification_contains_solution')
     # 旧存档只兼容读取；新请求和接受候选时检查新证据规则，不重写历史回复。
     if not allow_legacy:
-        issue = evidence_issue(value)
+        issue = evidence_issue(value, question=question, student_work=student_work)
         if issue:
             raise AnalysisValidationError(issue)
     return value

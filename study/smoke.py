@@ -102,7 +102,7 @@ def confirmed_source(directory, row_id, mode):
             or row['call']['kind'] != 'real_api' or row['call']['status'] != 'ok'):
         raise AuditError('真实订正只能复用用户确认的真实分析。')
     context = source.rows[row_id]['context']
-    validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'])
+    validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'], question=context['confirmed_question'])
     origin = ('DeepSeek / ' + source.manifest['config']['model'])[:100] if row['mode'] == 'real_api' else '本机 HTTP 手写响应（非模型）'
     expected = make_entry(entry_id(source, row_id), question=context['confirmed_question'],
         level=context['school_level'], my_work=context['student_work'], topic=row['result']['topic'],
@@ -333,7 +333,7 @@ def decide(audit, row_id, action, *, actor='user'):
             origin = ('DeepSeek / ' + audit.manifest['config']['model'])[:100] if row['mode'] == 'real_api' else '本机 HTTP 手写响应（非模型）'
             book = notebook(audit)
             if planned['operation'] == 'analyze':
-                validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'])
+                validate_analysis(row['result'], student_work=context['student_work'], work_kind=context['student_work_kind'], question=context['confirmed_question'])
                 photo_fields={}
                 if 'ocr_source' in audit.manifest:
                     from study.photo_analysis import entry_fields
@@ -353,7 +353,7 @@ def decide(audit, row_id, action, *, actor='user'):
                 previous_context = json.loads(row['payload']['messages'][1]['content'][0]['text'])
                 validate_result(row['result'], previous_work=previous_context['previous_student_work'],
                     previous_analysis=previous_context['previous_analysis'], answer=context['student_work'],
-                    work_kind=context['student_work_kind'])
+                    work_kind=context['student_work_kind'], question=context['confirmed_question'])
                 saved = book.add_correction(parent_id, 1, entry_id(audit, row_id), based_on='original',
                     answer=context['student_work'], work_kind=context['student_work_kind'], result=row['result'],
                     analysis_origin=origin, initial_entry=initial)

@@ -3,7 +3,7 @@ import re
 
 from step_check import parse_expression, UnsupportedExpression
 
-EVIDENCE_VERSION = 'analysis-evidence-v1'
+EVIDENCE_VERSION = 'analysis-evidence-v2'
 ANSWER_ONLY_FEEDBACK = {
     'correct': '当前答案与参考答案相符；仅有答案，不能判断计算过程，请补充步骤。',
     'incorrect': '当前答案与参考答案不符；仅有答案，不能判断计算过程，请补充步骤。',
@@ -50,7 +50,7 @@ def arithmetic_issue(quote, verdict):
     return None
 
 
-def evidence_issue(value):
+def evidence_issue(value, *, question=None, student_work=None):
     """结构校验后调用，返回固定错误码；不输出用户/模型正文。"""
     review = value['student_review']
     if review['work_kind'] == 'answer_only':
@@ -65,4 +65,5 @@ def evidence_issue(value):
         issue = arithmetic_issue(row['student_excerpt'], row['verdict'])
         if issue:
             return issue
-    return None
+    from study.equation_evidence import equation_issue
+    return equation_issue(question, student_work, review['comparisons'])

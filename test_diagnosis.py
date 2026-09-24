@@ -225,7 +225,7 @@ class DiagnosticHTTPTests(unittest.TestCase):
             self.assertEqual(STUDENT_WORK,context['student_work'])
             self.assertEqual('steps',context['student_work_kind'])
             self.assertEqual(2,len(server.requests))
-            self.assertEqual('photo-study-v6',tutor.calls[1]['contract'])
+            self.assertEqual('photo-study-v7',tutor.calls[1]['contract'])
 
     def test_bad_evidence_or_wrong_kind_fails_once_without_retry(self):
         with LocalModelServer() as server:

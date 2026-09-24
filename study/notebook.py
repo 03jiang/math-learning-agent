@@ -203,10 +203,10 @@ class Notebook:
             from study.corrections import validate_result
             previous_work, previous_analysis = entry['my_work'], entry['analysis']
             if previous_analysis is not None and previous_analysis.get('schema_version') == 2:
-                validate_analysis(previous_analysis, student_work=previous_work)
+                validate_analysis(previous_analysis, student_work=previous_work, question=entry['question'])
             for row in entry.get('corrections', []):
                 validate_result(row['result'], previous_work=previous_work, previous_analysis=previous_analysis,
-                                answer=row['answer'], work_kind=row['work_kind'])
+                                answer=row['answer'], work_kind=row['work_kind'], question=entry['question'])
                 previous_work, previous_analysis = row['answer'], row['result']['analysis']
         if not self.path(entry['id']).exists():
             check_new_evidence()  # 无效新记录不创建存档目录。
@@ -276,7 +276,7 @@ class Notebook:
             from study.corrections import validate_result
             previous = baseline(entry)
             validate_result(result, previous_work=previous['work'], previous_analysis=previous['analysis'],
-                            answer=answer, work_kind=work_kind)
+                            answer=answer, work_kind=work_kind, question=entry['question'])
             entry.setdefault('corrections',[]).append({'id':operation_id,'at':now(),'based_on':based_on,
                 'answer':answer.strip(),'work_kind':work_kind,'result':deepcopy(result),'analysis_origin':analysis_origin})
             entry['schema_version']=max(entry['schema_version'],2)

@@ -53,7 +53,7 @@ def failed_input(directory, row_id):
         raise AuditError('原回复不符合冻结格式，未生成复核候选。') from None
     validate_result(result, previous_work=context['previous_student_work'],
         previous_analysis=context['previous_analysis'], answer=context['student_work'],
-        work_kind=context['student_work_kind'])
+        work_kind=context['student_work_kind'],question=context['confirmed_question'])
     reference = {'directory': str(audit.directory), 'plan_id': audit.manifest['plan_id'], 'row_id': row_id,
         'original_status': 'failed', 'original_issue': call['validation_issue'],
         'mode': row['mode'], 'response_sha256': hashlib.sha256(audit.path(row_id).read_bytes()).hexdigest(),

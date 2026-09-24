@@ -83,9 +83,9 @@ class AgentStudyService(StudyService):
         def valid_result(value):
             if operation=='reanalyze':
                 validate_result(value,previous_work=context['previous_student_work'],previous_analysis=context['previous_analysis'],
-                                answer=context['student_work'],work_kind=context['student_work_kind'])
+                                answer=context['student_work'],work_kind=context['student_work_kind'],question=context['confirmed_question'])
             elif operation=='coach':validate_coach(value)
-            else: validate_analysis(value,student_work=context['student_work'],work_kind=context['student_work_kind'])
+            else: validate_analysis(value,student_work=context['student_work'],work_kind=context['student_work_kind'],question=context['confirmed_question'])
 
         try:
             while len(trace['model_calls'])<self.limits.model_requests:

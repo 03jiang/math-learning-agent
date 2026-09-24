@@ -93,7 +93,7 @@ class FixedWorkflowService(StudyService):
                     raise AgentError('tool_not_allowed')
                 validate = (validate_coach if operation == 'coach' else
                             lambda v: validate_analysis(v, student_work=context['student_work'],
-                                                        work_kind=context['student_work_kind']))
+                                                        work_kind=context['student_work_kind'],question=context['confirmed_question']))
                 value = validate_final(turn['value'], trace['sources'], validate)
                 if self.scope.signature() != signature:
                     raise AgentError('sources_changed')
