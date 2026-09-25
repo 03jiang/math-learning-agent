@@ -1,13 +1,13 @@
 {
   "format": 1,
   "kind": "public_source_export",
-  "file_count": 179,
+  "file_count": 180,
   "files": {
     ".github/workflows/ci.yml": "65cfebba66d0330e6561fb1d5346a74d20633cd16b1f77dc5f0d502577bf9c06",
     ".gitignore": "d0ffe2c5103e013059e1b4c06d7a160d8589018a8d08a3cc2e072c60c75ac647",
     ".streamlit/config.toml": "aa8081c65e99f93830fde7d5f2bf09e71fa0ea2aa2db9ce2bc1ce4606fa8a277",
     "API_SETUP.md": "fd6f0cef7c462d73e36dd2cdb5441a474f4d44a0cd188e11339b12c4c8cf6016",
-    "README.md": "6387722a54d8a3d1a6a0ded3b9f763cd56800fd138dce613179d89699d78cb6d",
+    "README.md": "04997d95d66029d2534db2cd4fc342d3a3e8f63e484ec2fe202ca114a68bcf43",
     "app.py": "e75a2815eeb9f5434db5d93ace1f43ce70b50c05eff4d5ef9ec4de63189a7bb6",
     "docs/AB_LIVE.md": "db9aa664d91ddf5f63229d8e5032ae42eba1e0ff14bedd17621dd1a3119717bc",
     "docs/AGENT_LIVE.md": "2d7ee253ee9f21b9e74901ca34513c7ea38b7fb0687f0c1531a065c8ab756ed8",
@@ -21,6 +21,7 @@
     "docs/EVALUATION_STATUS.md": "c9a39ed2d1e5607ebfc848d929662f31ca0f960b0a7f32896291530671251429",
     "docs/PHOTO_SMOKE.md": "cd66f8e7c11abd3782c6daac16991ad713dca44403a390553d65b9de20593a02",
     "docs/PRODUCT.md": "26483a3de40215b47962d85f8ff1e912ef4375292750d9642ecb371870b0c0cc",
+    "docs/README.md": "9634d21739a7d3ff64ba454a23ede015d7a0a5756e9ca4a3d33860fc310c9a7a",
     "docs/STATUS.md": "ff076fc68c300965352a11fb3b5309a39c77e869058fb9b8852e6b6afbd4a4b7",
     "docs/STUDY_SMOKE.md": "9b36a4e3411f54f3a5ae33f51e81b0e4af65b8698df6296d83d37d95e4a1398b",
     "docs/images/study-demo.png": "e2b83e1d77dbe492a9a687e3cd4ef4fc728f858da5b14487371b139d826015ee",
@@ -178,7 +179,7 @@
     "tools/evaluate_agent_live.py": "84c21676785f496201ee115c4dc7a56ee85d5ea34e1e7668e4712910d8ff0586",
     "tools/export_public.py": "2721b44646152a58b4a09cad771a1cd172b666cf74d57d4cbe20687b6a176af0",
     "tools/launch_demo.py": "e32fefc96b17661589ff7f2f00e030628d77c29a88a966b459affbd3c9cdc0d5",
-    "tools/public_files.json": "8cd3f7d8419bc8e50152e732985cb46734f6ef966e6bb2fd4a4bb27fd3a960a0",
+    "tools/public_files.json": "bcc5dc2643b5843c8655737dd06c4c49e3696d1af14b7a26ed0f4f026cc68485",
     "tools/revalidate_correction.py": "e3b1dc2e17c0d5771a4e64a25e401f285d7d1d76e9af2392380e3bd5cbba3159",
     "tools/verify_agent_live.py": "818d9d7b62fa5f191d1f0ad8c7b13e26e402b35ebaad618dea8263ab6a6f9408",
     "tools/verify_study_live.py": "f510e33e0881fb109669130fbd497ef34ea009acd33036210148dc9b9500fce3"
