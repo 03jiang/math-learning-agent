@@ -31,10 +31,11 @@ def text(value, name, maximum=6000, required=False):
 def validate_entry(entry):
     expected = {'schema_version','id','version','created_at','updated_at','question','level','my_work',
                 'topic','reason','correction','analysis','analysis_origin','image','reviews','operation_ids'}
-    if type(entry) is not dict or type(entry.get('schema_version')) is not int or entry['schema_version'] not in (1,2,3):
+    if type(entry) is not dict or type(entry.get('schema_version')) is not int or entry['schema_version'] not in (1,2,3,4):
         raise ValueError('错题存档格式不正确，未覆盖原文件。')
     if entry['schema_version']>=2: expected.add('corrections')
-    if entry['schema_version']==3: expected.update(('work_image','archived_at','archive_events'))
+    if entry['schema_version']>=3: expected.update(('work_image','archived_at','archive_events'))
+    if entry['schema_version']==4: expected.add('transcription')
     if set(entry)!=expected: raise ValueError('错题存档字段不正确，未覆盖原文件。')
     if not isinstance(entry['id'], str) or not ID.fullmatch(entry['id']):
         raise ValueError('错题编号无效。')
@@ -80,9 +81,9 @@ def validate_entry(entry):
             text(row['analysis_origin'],'订正分析来源',100,True)
             datetime.fromisoformat(row['at'])
             validate_result(row['result'],previous_work=prior_work,previous_analysis=prior_analysis,
-                            answer=row['answer'],work_kind=row['work_kind'])
+                            answer=row['answer'],work_kind=row['work_kind'],allow_legacy=True)
             prior_id,prior_work,prior_analysis=row['id'],row['answer'],row['result']['analysis']
-    if entry['schema_version']==3:
+    if entry['schema_version']>=3:
         if entry['work_image'] is not None: image_bytes(entry['work_image'])
         if entry['archived_at'] is not None:
             text(entry['archived_at'],'回收站时间',100,True)
@@ -102,6 +103,13 @@ def validate_entry(entry):
             archived_at=event['at'] if expected_archived else None
         if entry['archived_at']!=archived_at:
             raise ValueError('回收站状态与操作记录不符。')
+    if entry['schema_version']==4:
+        from study.transcription import validate_trace
+        validate_trace(entry['transcription'],question=entry['question'],my_work=entry['my_work'],
+                       image=entry['image'],work_image=entry['work_image'])
+        if entry['analysis'] and entry['analysis'].get('schema_version')==2:
+            if entry['analysis']['student_review']['work_kind']!=entry['transcription']['confirmed']['work_kind']:
+                raise ValueError('分析作答类型与核对记录不同。')
     return entry
 
 
@@ -110,7 +118,7 @@ def upgrade_v3(entry):
     entry.setdefault('work_image',None)
     entry.setdefault('archived_at',None)
     entry.setdefault('archive_events',[])
-    entry['schema_version']=3
+    entry['schema_version']=max(entry['schema_version'],3)
     return entry
 
 
@@ -120,7 +128,7 @@ def ensure_active(entry):
 
 
 def make_entry(entry_id, *, question, level, my_work='', topic='待整理', reason='尚不确定',
-               correction='', analysis=None, analysis_origin='手动整理', image=None,work_image=None):
+               correction='', analysis=None, analysis_origin='手动整理', image=None,work_image=None,transcription=None):
     stamp=now()
     entry={'schema_version':1,'id':entry_id,'version':1,'created_at':stamp,'updated_at':stamp,
         'question':question.strip(),'level':level,'my_work':my_work.strip(),'topic':topic.strip(),
@@ -128,6 +136,9 @@ def make_entry(entry_id, *, question, level, my_work='', topic='待整理', reas
         'analysis_origin':analysis_origin,'image':deepcopy(image),'reviews':[],'operation_ids':[]}
     if work_image is not None:
         upgrade_v3(entry)['work_image']=deepcopy(work_image)
+    if transcription is not None:
+        upgrade_v3(entry)['transcription']=deepcopy(transcription)
+        entry['schema_version']=4
     return validate_entry(entry)
 
 
@@ -186,11 +197,25 @@ class Notebook:
 
     def save_new(self, entry):
         validate_entry(entry)
+        # 兼容读取旧回复不等于允许新收藏绕过当前证据规则。
+        def check_new_evidence():
+            from study.diagnosis import validate_analysis
+            from study.corrections import validate_result
+            previous_work, previous_analysis = entry['my_work'], entry['analysis']
+            if previous_analysis is not None and previous_analysis.get('schema_version') == 2:
+                validate_analysis(previous_analysis, student_work=previous_work, question=entry['question'])
+            for row in entry.get('corrections', []):
+                validate_result(row['result'], previous_work=previous_work, previous_analysis=previous_analysis,
+                                answer=row['answer'], work_kind=row['work_kind'], question=entry['question'])
+                previous_work, previous_analysis = row['answer'], row['result']['analysis']
+        if not self.path(entry['id']).exists():
+            check_new_evidence()  # 无效新记录不创建存档目录。
         with self.locked():
             if self.path(entry['id']).exists():
                 previous=self.get(entry['id'])
                 if previous == entry: return 'already_saved'
                 raise ValueError('该编号已有不同内容，未覆盖。请重新开始一道题。')
+            check_new_evidence()  # 加锁期间重新检查，避免旧文件消失后绕过新存档规则。
             self.write(entry)
         return 'saved'
 
@@ -218,13 +243,23 @@ class Notebook:
             self.write(entry)
             return entry
 
-    def add_correction(self,entry_id,version,operation_id,*,based_on,answer,work_kind,result,analysis_origin):
+    def add_correction(self,entry_id,version,operation_id,*,based_on,answer,work_kind,result,analysis_origin,
+                       initial_entry=None):
         if type(operation_id) is not str or not ID.fullmatch(operation_id):
             raise ValueError('订正操作编号无效。')
         text(answer,'本次订正',3000,True)
         from study.corrections import baseline
+        if initial_entry is not None:
+            validate_entry(initial_entry)
+            if initial_entry['id'] != entry_id or initial_entry['version'] != 1:
+                raise ValueError('复用原记录编号或版本无效。')
         with self.locked():
-            entry=self.get(entry_id)
+            if (initial_entry is not None and not self.path(entry_id).exists()
+                    and not self.path(entry_id).is_symlink()):
+                # 只在用户确认后复制；原记录和订正合成后一次原子写入。
+                entry=deepcopy(initial_entry)
+            else:
+                entry=self.get(entry_id)
             ensure_active(entry)
             if operation_id in entry['operation_ids']:
                 existing=next((r for r in entry.get('corrections',[]) if r['id']==operation_id),None)
@@ -233,9 +268,15 @@ class Notebook:
                 if not existing or any(existing[k]!=v for k,v in expected.items()):
                     raise ValueError('该操作编号已用于不同内容，未修改。')
                 return entry
+            if initial_entry is not None and entry != initial_entry:
+                raise ValueError('目的存档与复用原记录不同，未覆盖。')
             if type(version) is not int or entry['version']!=version or baseline(entry)['id']!=based_on:
                 raise ValueError('本题或对照作答已更新，请重新核对并分析。')
             text(answer,'本次订正',3000,True)
+            from study.corrections import validate_result
+            previous = baseline(entry)
+            validate_result(result, previous_work=previous['work'], previous_analysis=previous['analysis'],
+                            answer=answer, work_kind=work_kind, question=entry['question'])
             entry.setdefault('corrections',[]).append({'id':operation_id,'at':now(),'based_on':based_on,
                 'answer':answer.strip(),'work_kind':work_kind,'result':deepcopy(result),'analysis_origin':analysis_origin})
             entry['schema_version']=max(entry['schema_version'],2)

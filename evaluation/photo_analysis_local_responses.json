@@ -1,0 +1,78 @@
+{
+  "evidence_kind": "handwritten_fixture_not_model_output",
+  "responses": {
+    "b01": {
+      "schema_version": 2,
+      "status": "solved",
+      "topic": "异分母分数加法",
+      "summary": "先统一分数单位，再把相同单位的份数相加。",
+      "steps": [
+        "把 1/2 通分成 2/4。",
+        "2/4 + 1/4 = 3/4。"
+      ],
+      "answer": "3/4",
+      "student_review": {
+        "work_kind": "steps",
+        "verdict": "incorrect",
+        "observed_approach": "原式把两个分子和两个分母分别相加。",
+        "answer_feedback": "原答案 2/6 与参考结果 3/4 不同。",
+        "comparisons": [
+          {
+            "student_excerpt": "1/2 + 1/4 = (1 + 1)/(2 + 4)",
+            "reference_step": "先把 1/2 化为 2/4，再计算 2/4 + 1/4 = 3/4。",
+            "verdict": "incorrect",
+            "explanation": "二分之一和四分之一的每份大小不同，不能直接将分子、分母分别相加。"
+          },
+          {
+            "student_excerpt": "(1 + 1)/(2 + 4) = 2/6",
+            "reference_step": "先通分，再计算 2/4 + 1/4 = 3/4。",
+            "verdict": "correct",
+            "explanation": "这一步分子分母内的运算成立，但沿用了上一步错误的分数加法变形；整体答案仍不正确。"
+          }
+        ]
+      },
+      "knowledge_points": [
+        "异分母分数加法",
+        "通分"
+      ],
+      "diagnosis": [
+        {
+          "category": "概念不清",
+          "knowledge_point": "通分",
+          "evidence": "1/2 + 1/4 = (1 + 1)/(2 + 4)",
+          "explanation": "可能尚未区分分数单位，也可能是把计算规则记混；仅凭这一题不能确定。",
+          "check_question": "一个二分之一与一个四分之一，每份的大小一样吗？"
+        }
+      ],
+      "takeaway": "异分母分数相加，先通分，再将分子相加，分母保持不变。",
+      "next_practice": "用四等份的图解释为什么先把 1/2 写成 2/4。",
+      "clarification": ""
+    },
+    "b02": {
+      "schema_version": 2,
+      "status": "solved",
+      "topic": "异分母分数加法",
+      "summary": "先通分成相同分母，再相加。",
+      "steps": [
+        "1/2 = 2/4。",
+        "2/4 + 1/4 = 3/4。"
+      ],
+      "answer": "3/4",
+      "student_review": {
+        "work_kind": "answer_only",
+        "verdict": "incorrect",
+        "observed_approach": "",
+        "answer_feedback": "当前答案与参考答案不符；仅有答案，不能判断计算过程，请补充步骤。",
+        "comparisons": []
+      },
+      "knowledge_points": [
+        "异分母分数加法",
+        "通分"
+      ],
+      "diagnosis": [],
+      "takeaway": "先把分数化成相同单位，再相加，并检查结果是否大于任意一个加数。",
+      "next_practice": "请补充你得到 2/6 的列式或计算步骤。",
+      "clarification": ""
+    }
+  }
+}

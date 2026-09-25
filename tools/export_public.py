@@ -8,7 +8,7 @@ import re
 ROOT=Path(__file__).resolve().parents[1]
 BLOCKED={'.git','data','evaluation_runs','verification','.env','.venv','__pycache__'}
 CREDENTIAL=re.compile(r'\b(?:sk-[A-Za-z0-9_-]{24,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,})')
-LOCAL_PATH=re.compile(r'/Users/[^/\s]+/Documents/Codex|/private[/]var[/]folders/')
+LOCAL_PATH=re.compile(r'/Users[/][^/\s]+/|/home[/][^/\s]+/|/private[/]var[/]folders/|[A-Za-z]:[\\/]Users[\\/][^\\/\s]+[\\/]')
 
 
 def export(root, output):
