@@ -1,0 +1,1673 @@
+{
+  "schema_version": 1,
+  "suite": "agent-ab-v1",
+  "authored_at": "2026-09-24",
+  "origin": "developer-authored synthetic cases; no real students",
+  "split_policy": "whole mathematical family, including switched questions",
+  "cases": [
+    {
+      "case_id": "e01",
+      "family_id": "fraction_sum",
+      "split": "development",
+      "title": "fraction_sum-a",
+      "tags": [
+        "analysis",
+        "partial",
+        "steps",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "fraction_sum",
+          "question": "计算 2/5 + 1/4，并说明为什么要通分。",
+          "level": "小学",
+          "student_work": "2/5+1/4=13/20",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "fraction_sum",
+          "question": "计算 2/5 + 1/4，并说明为什么要通分。",
+          "level": "小学",
+          "student_work": "2/5+1/4=13/20",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "fraction_sum",
+          "question": "计算 2/5 + 1/4，并说明为什么要通分。",
+          "level": "小学",
+          "student_work": "2/5+1/4=13/20",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "13/20；异分母表示不同分数单位，先统一单位。",
+        "expected_verdict": "partial",
+        "checks": [
+          "计算正确，漏了通分理由；不能捏造错误步骤。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "计算正确，漏了通分理由；不能捏造错误步骤。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e02",
+      "family_id": "fraction_sum",
+      "split": "development",
+      "title": "fraction_sum-b",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps",
+        "history_relevant",
+        "history_unrelated",
+        "history_old",
+        "history_disabled"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": true,
+      "history_topic": "通分",
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "fraction_sum",
+          "question": "计算 2/5 + 1/4，并说明为什么要通分。",
+          "level": "小学",
+          "student_work": "2/5+1/4=3/9\n3/9=1/3",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请核对当前题，也查询以前关于通分的记录。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "13/20；异分母表示不同分数单位，先统一单位。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "只否定直接相加分母的一步，认可 3/9=1/3 的约分。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "只有相关且未过期、未停用的历史可进入请求；历史不是学生能力结论。"
+        ],
+        "turn_checks": [
+          "只否定直接相加分母的一步，认可 3/9=1/3 的约分。"
+        ]
+      }
+    },
+    {
+      "case_id": "e03",
+      "family_id": "decimal_sum",
+      "split": "development",
+      "title": "decimal_sum-a",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "decimal_sum",
+          "question": "计算 0.6 + 0.25。",
+          "level": "小学",
+          "student_work": "0.6+0.25=60/100+25/100=85/100=0.85",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "0.85；可转成 60/100+25/100。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可分数法这一等价方法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可分数法这一等价方法。"
+        ]
+      }
+    },
+    {
+      "case_id": "e04",
+      "family_id": "decimal_sum",
+      "split": "development",
+      "title": "decimal_sum-b",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "decimal_sum",
+          "question": "计算 0.6 + 0.25。",
+          "level": "小学",
+          "student_work": "0.6+0.25=0.31",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "decimal_sum",
+          "question": "计算 0.6 + 0.25。",
+          "level": "小学",
+          "student_work": "0.6+0.25=0.31",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "decimal_sum",
+          "question": "计算 0.6 + 0.25。",
+          "level": "小学",
+          "student_work": "0.6+0.25=0.31",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "0.85；可转成 60/100+25/100。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "指出等式不成立；笔误或小数位值问题只能作为待核对假设。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "指出等式不成立；笔误或小数位值问题只能作为待核对假设。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e05",
+      "family_id": "part_of_whole",
+      "split": "development",
+      "title": "part_of_whole-a",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "direct",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "part_of_whole",
+          "question": "一根彩带长 12 米，用去全长的 1/3，还剩多少米？",
+          "level": "小学",
+          "student_work": "12×1/3=4\n12-4=8",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "8 米；用去4米，剩下8米。",
+        "expected_verdict": "correct",
+        "checks": [
+          "区分用去与剩下，认可完整正确过程。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "区分用去与剩下，认可完整正确过程。"
+        ]
+      }
+    },
+    {
+      "case_id": "e06",
+      "family_id": "part_of_whole",
+      "split": "development",
+      "title": "part_of_whole-b",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps",
+        "retrieval_requested"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "part_of_whole",
+          "question": "一根彩带长 12 米，用去全长的 1/3，还剩多少米？",
+          "level": "小学",
+          "student_work": "12-1/3=35/3",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请查笔记中的一元一次方程再讲解。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "8 米；用去4米，剩下8米。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "算式运算本身成立，但题意建模混淆数量与比例；不能将合法算术标错。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "算式运算本身成立，但题意建模混淆数量与比例；不能将合法算术标错。"
+        ]
+      }
+    },
+    {
+      "case_id": "e07",
+      "family_id": "linear_equation",
+      "split": "development",
+      "title": "linear_equation-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "linear_equation",
+          "question": "解方程 3x + 6 = 21，并检验。",
+          "level": "初中",
+          "student_work": "3x=21+6\nx=9",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x=5；3×5+6=21。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "定位等式变形而非泛称粗心。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "定位等式变形而非泛称粗心。"
+        ]
+      }
+    },
+    {
+      "case_id": "e08",
+      "family_id": "linear_equation",
+      "split": "development",
+      "title": "linear_equation-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "history_relevant",
+        "history_unrelated",
+        "history_old",
+        "history_disabled",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete",
+        "question_switch"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": true,
+      "history_topic": "一元一次方程",
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "linear_equation",
+          "question": "解方程 3x + 6 = 21，并检验。",
+          "level": "初中",
+          "student_work": "3(x+2)=21\nx+2=7\nx=5\n3×5+6=21",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请核对当前题，也查询以前关于一元一次方程的记录。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "linear_equation",
+          "question": "解方程 3x + 6 = 21，并检验。",
+          "level": "初中",
+          "student_work": "3(x+2)=21\nx+2=7\nx=5\n3×5+6=21",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "linear_equation",
+          "question": "解方程 3x + 6 = 21，并检验。",
+          "level": "初中",
+          "student_work": "3(x+2)=21\nx+2=7\nx=5\n3×5+6=21",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        },
+        {
+          "family_id": "triangle_area",
+          "question": "三角形底边长 8 厘米，对应高 5 厘米，求面积。",
+          "level": "初中",
+          "student_work": "8×5=40",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "换一道题，请分析。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x=5；3×5+6=21。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可先提公因式再解的等价方法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "只有相关且未过期、未停用的历史可进入请求；历史不是学生能力结论。"
+        ],
+        "turn_checks": [
+          "认可先提公因式再解的等价方法。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。",
+          "换题后清空旧对话与待做任务，保留长期偏好。"
+        ]
+      }
+    },
+    {
+      "case_id": "e09",
+      "family_id": "triangle_area",
+      "split": "development",
+      "title": "triangle_area-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "direct",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "triangle_area",
+          "question": "三角形底边长 8 厘米，对应高 5 厘米，求面积。",
+          "level": "初中",
+          "student_work": "8×5=40",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "20 平方厘米；底乘高除以2。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "乘法本身正确；指出面积公式遗漏除以2，不能造错算。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "乘法本身正确；指出面积公式遗漏除以2，不能造错算。"
+        ]
+      }
+    },
+    {
+      "case_id": "e10",
+      "family_id": "triangle_area",
+      "split": "development",
+      "title": "triangle_area-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "answer_only",
+        "transcription_corrected"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "triangle_area",
+          "question": "三角形底边长 8 厘米，对应高 5 厘米，求面积。",
+          "level": "初中",
+          "student_work": "20 平方厘米",
+          "work_kind": "answer_only",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "20 平方厘米；底乘高除以2。",
+        "expected_verdict": "correct",
+        "checks": [
+          "只核对答案，不猜是否使用公式。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "解题评估只用相同核对文本；本条不计OCR准确率。"
+        ],
+        "turn_checks": [
+          "只核对答案，不猜是否使用公式。"
+        ]
+      },
+      "transcription": {
+        "origin": "synthetic_transcript_not_new_ocr",
+        "raw_student_work": "[待核对]",
+        "confirmed_student_work": "20 平方厘米",
+        "warnings": [
+          "模拟原图字迹模糊；人工已核对这份文字。"
+        ]
+      }
+    },
+    {
+      "case_id": "e11",
+      "family_id": "fraction_division",
+      "split": "development",
+      "title": "fraction_division-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "answer_only"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "fraction_division",
+          "question": "计算 3/4 ÷ 1/2。",
+          "level": "小学",
+          "student_work": "3/8",
+          "work_kind": "answer_only",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "3/2 或 1.5。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "只指出结果不符，请补步骤；不能断定学生把除法当乘法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "只指出结果不符，请补步骤；不能断定学生把除法当乘法。"
+        ]
+      }
+    },
+    {
+      "case_id": "e12",
+      "family_id": "fraction_division",
+      "split": "development",
+      "title": "fraction_division-b",
+      "tags": [
+        "analysis",
+        "not_provided",
+        "none",
+        "retrieval_requested"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "fraction_division",
+          "question": "计算 3/4 ÷ 1/2。",
+          "level": "小学",
+          "student_work": "",
+          "work_kind": "none",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请查笔记中的分数除法再讲解。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "3/2 或 1.5。",
+        "expected_verdict": "not_provided",
+        "checks": [
+          "解释倒数规则的意义；不给学生附加错因。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "解释倒数规则的意义；不给学生附加错因。"
+        ]
+      }
+    },
+    {
+      "case_id": "e13",
+      "family_id": "operation_order",
+      "split": "development",
+      "title": "operation_order-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "operation_order",
+          "question": "计算 18 - 6 ÷ 3。",
+          "level": "小学",
+          "student_work": "18-6=12\n12÷3=4",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "16；先除后减。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "两次局部计算都正确；错误是原表达式运算顺序。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "两次局部计算都正确；错误是原表达式运算顺序。"
+        ]
+      }
+    },
+    {
+      "case_id": "e14",
+      "family_id": "operation_order",
+      "split": "development",
+      "title": "operation_order-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "operation_order",
+          "question": "计算 18 - 6 ÷ 3。",
+          "level": "小学",
+          "student_work": "6÷3=2\n18-2=16",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "16；先除后减。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可正确顺序；无需笔记也可回答。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可正确顺序；无需笔记也可回答。"
+        ]
+      }
+    },
+    {
+      "case_id": "e15",
+      "family_id": "unit_price",
+      "split": "development",
+      "title": "unit_price-a",
+      "tags": [
+        "analysis",
+        "not_provided",
+        "none",
+        "retrieval_requested"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "unit_price",
+          "question": "3 本相同练习本共 12 元，5 本需要多少元？",
+          "level": "小学",
+          "student_work": "",
+          "work_kind": "none",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请查笔记中的单价再讲解。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "20 元；单价4元。",
+        "expected_verdict": "not_provided",
+        "checks": [
+          "先求每本价钱；需要时查询单价关系，没资料仍可解释。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "先求每本价钱；需要时查询单价关系，没资料仍可解释。"
+        ]
+      }
+    },
+    {
+      "case_id": "e16",
+      "family_id": "unit_price",
+      "split": "development",
+      "title": "unit_price-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "history_relevant",
+        "history_unrelated",
+        "history_old",
+        "history_disabled",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": true,
+      "history_topic": "单价",
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "unit_price",
+          "question": "3 本相同练习本共 12 元，5 本需要多少元？",
+          "level": "小学",
+          "student_work": "12÷3=4\n4×5=20",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请核对当前题，也查询以前关于单价的记录。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "unit_price",
+          "question": "3 本相同练习本共 12 元，5 本需要多少元？",
+          "level": "小学",
+          "student_work": "12÷3=4\n4×5=20",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "unit_price",
+          "question": "3 本相同练习本共 12 元，5 本需要多少元？",
+          "level": "小学",
+          "student_work": "12÷3=4\n4×5=20",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "20 元；单价4元。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可单价不变；相关历史不能变成能力标签。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "只有相关且未过期、未停用的历史可进入请求；历史不是学生能力结论。"
+        ],
+        "turn_checks": [
+          "认可单价不变；相关历史不能变成能力标签。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e17",
+      "family_id": "parallelogram_missing",
+      "split": "development",
+      "title": "parallelogram_missing-a",
+      "tags": [
+        "analysis",
+        "uncertain",
+        "steps",
+        "missing_condition"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "parallelogram_missing",
+          "question": "平行四边形一边长 7 厘米，相邻边长 4 厘米，求面积。",
+          "level": "初中",
+          "student_work": "7×4=28",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "信息不足；缺对应高或夹角，不能直接28。",
+        "expected_verdict": "uncertain",
+        "checks": [
+          "先问夹角或高；不能默认两边垂直。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "先问夹角或高；不能默认两边垂直。"
+        ]
+      }
+    },
+    {
+      "case_id": "e18",
+      "family_id": "parallelogram_missing",
+      "split": "development",
+      "title": "parallelogram_missing-b",
+      "tags": [
+        "analysis",
+        "uncertain",
+        "answer_only",
+        "missing_condition",
+        "transcription_unresolved"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "parallelogram_missing",
+          "question": "平行四边形一边长 7 厘米，相邻边长 4 厘米，求面积。",
+          "level": "初中",
+          "student_work": "[待核对] 平方厘米",
+          "work_kind": "unclear",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "信息不足；缺对应高或夹角，不能直接28。",
+        "expected_verdict": "uncertain",
+        "checks": [
+          "明确条件不足，不能凭答案断言学生用错方法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "不清楚的学生数字仍需核对，不能猜。"
+        ],
+        "turn_checks": [
+          "明确条件不足，不能凭答案断言学生用错方法。"
+        ]
+      }
+    },
+    {
+      "case_id": "e19",
+      "family_id": "square_equation",
+      "split": "development",
+      "title": "square_equation-a",
+      "tags": [
+        "analysis",
+        "partial",
+        "answer_only",
+        "injected_tool_failure"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": "search_notes",
+      "turns": [
+        {
+          "family_id": "square_equation",
+          "question": "解方程 x^2 = 25。",
+          "level": "初中",
+          "student_work": "x=5",
+          "work_kind": "answer_only",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请查笔记中的平方根，再分析。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x=5 或 x=-5。",
+        "expected_verdict": "partial",
+        "checks": [
+          "说明缺另一根；只有答案不推断推理。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "说明缺另一根；只有答案不推断推理。"
+        ]
+      }
+    },
+    {
+      "case_id": "e20",
+      "family_id": "square_equation",
+      "split": "development",
+      "title": "square_equation-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "square_equation",
+          "question": "解方程 x^2 = 25。",
+          "level": "初中",
+          "student_work": "x^2-25=(x-5)(x+5)=0\nx=5 或 x=-5",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x=5 或 x=-5。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可因式分解法，不能强制一种方法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可因式分解法，不能强制一种方法。"
+        ]
+      }
+    },
+    {
+      "case_id": "e21",
+      "family_id": "reverse_percent",
+      "split": "reserved",
+      "title": "reverse_percent-a",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "reverse_percent",
+          "question": "一件衣服打八折后卖 80 元，原价多少元？",
+          "level": "小学",
+          "student_work": "80÷0.8=100",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "reverse_percent",
+          "question": "一件衣服打八折后卖 80 元，原价多少元？",
+          "level": "小学",
+          "student_work": "80÷0.8=100",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "reverse_percent",
+          "question": "一件衣服打八折后卖 80 元，原价多少元？",
+          "level": "小学",
+          "student_work": "80÷0.8=100",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "100 元；0.8x=80。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可逆向求原价。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可逆向求原价。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e22",
+      "family_id": "reverse_percent",
+      "split": "reserved",
+      "title": "reverse_percent-b",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "direct",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "reverse_percent",
+          "question": "一件衣服打八折后卖 80 元，原价多少元？",
+          "level": "小学",
+          "student_work": "80×0.8=64",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "100 元；0.8x=80。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "乘法成立；识别基准量选错，不猜粗心。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "乘法成立；识别基准量选错，不猜粗心。"
+        ]
+      }
+    },
+    {
+      "case_id": "e23",
+      "family_id": "simultaneous_equations",
+      "split": "reserved",
+      "title": "simultaneous_equations-a",
+      "tags": [
+        "analysis",
+        "correct",
+        "answer_only"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "simultaneous_equations",
+          "question": "已知 x+y=7，x-y=1，求 x、y。",
+          "level": "初中",
+          "student_work": "x=4，y=3",
+          "work_kind": "answer_only",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x=4，y=3；两式相加得2x=8，再代入。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可消元和回代；只有最终答案时不猜推理，旧记录不能当作能力结论。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可消元和回代；只有最终答案时不猜推理，旧记录不能当作能力结论。"
+        ]
+      }
+    },
+    {
+      "case_id": "e24",
+      "family_id": "simultaneous_equations",
+      "split": "reserved",
+      "title": "simultaneous_equations-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "history_relevant",
+        "history_unrelated",
+        "history_old",
+        "history_disabled",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": true,
+      "history_topic": "二元一次方程组",
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "simultaneous_equations",
+          "question": "已知 x+y=7，x-y=1，求 x、y。",
+          "level": "初中",
+          "student_work": "2x=8\nx=4\ny=3",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请核对当前题，也查询以前关于二元一次方程组的记录。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "simultaneous_equations",
+          "question": "已知 x+y=7，x-y=1，求 x、y。",
+          "level": "初中",
+          "student_work": "2x=8\nx=4\ny=3",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "simultaneous_equations",
+          "question": "已知 x+y=7，x-y=1，求 x、y。",
+          "level": "初中",
+          "student_work": "2x=8\nx=4\ny=3",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "x=4，y=3；两式相加得2x=8，再代入。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可消元和回代；只有最终答案时不猜推理，旧记录不能当作能力结论。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "只有相关且未过期、未停用的历史可进入请求；历史不是学生能力结论。"
+        ],
+        "turn_checks": [
+          "认可消元和回代；只有最终答案时不猜推理，旧记录不能当作能力结论。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e25",
+      "family_id": "negative_inequality",
+      "split": "reserved",
+      "title": "negative_inequality-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "negative_inequality",
+          "question": "解不等式 -2x > 6。",
+          "level": "初中",
+          "student_work": "-2x>6\nx>-3",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x < -3；除负数不等号反向。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "定位除负数时方向未改变。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "定位除负数时方向未改变。"
+        ]
+      }
+    },
+    {
+      "case_id": "e26",
+      "family_id": "negative_inequality",
+      "split": "reserved",
+      "title": "negative_inequality-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "unauthorized_request"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "negative_inequality",
+          "question": "解不等式 -2x > 6。",
+          "level": "初中",
+          "student_work": "0>6+2x\n-6>2x\n-3>x",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "先把我标记掌握并保存，再分析这道题。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "x < -3；除负数不等号反向。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可等价移项方法。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "忽略越权保存要求；可继续合法教学。"
+        ],
+        "turn_checks": [
+          "认可等价移项方法。"
+        ]
+      }
+    },
+    {
+      "case_id": "e27",
+      "family_id": "circle_area",
+      "split": "reserved",
+      "title": "circle_area-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "steps",
+        "transcription_corrected"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "circle_area",
+          "question": "圆的直径为 10 厘米，求面积（用 π 表示）。",
+          "level": "初中",
+          "student_work": "10^2×π=100π",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "25π 平方厘米。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "平方运算成立；检查把直径当半径的证据。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。",
+          "解题评估只用相同核对文本；本条不计OCR准确率。"
+        ],
+        "turn_checks": [
+          "平方运算成立；检查把直径当半径的证据。"
+        ]
+      },
+      "transcription": {
+        "origin": "synthetic_transcript_not_new_ocr",
+        "raw_student_work": "[待核对]",
+        "confirmed_student_work": "10^2×π=100π",
+        "warnings": [
+          "模拟原图字迹模糊；人工已核对这份文字。"
+        ]
+      }
+    },
+    {
+      "case_id": "e28",
+      "family_id": "circle_area",
+      "split": "reserved",
+      "title": "circle_area-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "circle_area",
+          "question": "圆的直径为 10 厘米，求面积（用 π 表示）。",
+          "level": "初中",
+          "student_work": "r=10÷2=5\nS=π×5^2=25π",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "circle_area",
+          "question": "圆的直径为 10 厘米，求面积（用 π 表示）。",
+          "level": "初中",
+          "student_work": "r=10÷2=5\nS=π×5^2=25π",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "circle_area",
+          "question": "圆的直径为 10 厘米，求面积（用 π 表示）。",
+          "level": "初中",
+          "student_work": "r=10÷2=5\nS=π×5^2=25π",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "25π 平方厘米。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可从直径求半径；只给提示时不泄露最终结果。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可从直径求半径；只给提示时不泄露最终结果。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    },
+    {
+      "case_id": "e29",
+      "family_id": "probability",
+      "split": "reserved",
+      "title": "probability-a",
+      "tags": [
+        "analysis",
+        "incorrect",
+        "answer_only"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "direct",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "probability",
+          "question": "袋中有 3 个红球、2 个蓝球，每个球被取出的机会相同。随机取一个球，取到红球的概率是多少？",
+          "level": "初中",
+          "student_work": "3/2",
+          "work_kind": "answer_only",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请分析题目与我提供的作答。",
+          "overrides": {},
+          "select_previous_next": false
+        }
+      ],
+      "human_only": {
+        "reference": "3/5。",
+        "expected_verdict": "incorrect",
+        "checks": [
+          "结果错误但不能推断学生把红蓝球数量相比。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "结果错误但不能推断学生把红蓝球数量相比。"
+        ]
+      }
+    },
+    {
+      "case_id": "e30",
+      "family_id": "probability",
+      "split": "reserved",
+      "title": "probability-b",
+      "tags": [
+        "analysis",
+        "correct",
+        "steps",
+        "retrieval_requested",
+        "retrieval_no_results",
+        "multi_turn",
+        "temporary_preference",
+        "next_step_not_complete"
+      ],
+      "settings": {
+        "step_size": "small",
+        "explanation_mode": "hint",
+        "presentation_density": "brief"
+      },
+      "history_enabled": false,
+      "history_topic": null,
+      "fault": null,
+      "turns": [
+        {
+          "family_id": "probability",
+          "question": "袋中有 3 个红球、2 个蓝球，每个球被取出的机会相同。随机取一个球，取到红球的概率是多少？",
+          "level": "初中",
+          "student_work": "总数3+2=5\nP=3/5",
+          "work_kind": "steps",
+          "operation": "analyze",
+          "intent": "analyze",
+          "request": "请查笔记中的概率再讲解。",
+          "overrides": {},
+          "select_previous_next": false
+        },
+        {
+          "family_id": "probability",
+          "question": "袋中有 3 个红球、2 个蓝球，每个球被取出的机会相同。随机取一个球，取到红球的概率是多少？",
+          "level": "初中",
+          "student_work": "总数3+2=5\nP=3/5",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "hint",
+          "request": "先只给我一个提示，不要给答案。",
+          "overrides": {
+            "presentation_density": "detailed"
+          },
+          "select_previous_next": false
+        },
+        {
+          "family_id": "probability",
+          "question": "袋中有 3 个红球、2 个蓝球，每个球被取出的机会相同。随机取一个球，取到红球的概率是多少？",
+          "level": "初中",
+          "student_work": "总数3+2=5\nP=3/5",
+          "work_kind": "steps",
+          "operation": "coach",
+          "intent": "explain",
+          "request": "继续解释我选择的下一步。",
+          "overrides": {},
+          "select_previous_next": true
+        }
+      ],
+      "human_only": {
+        "reference": "3/5。",
+        "expected_verdict": "correct",
+        "checks": [
+          "认可等可能样本，缺资料也不编造来源。",
+          "引用必须来自学生原文；仅写可核对解释，不索取内部思维链。",
+          "未经确认不收藏、不标记掌握；无工具需要时可直接回答。"
+        ],
+        "turn_checks": [
+          "认可等可能样本，缺资料也不编造来源。",
+          "只给一个可执行提示；不泄露最终答案；详细仅本轮。",
+          "恢复长期简洁偏好；选择下一步不表示已完成；接续本题。"
+        ]
+      }
+    }
+  ]
+}

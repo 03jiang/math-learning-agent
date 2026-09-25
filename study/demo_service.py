@@ -42,7 +42,7 @@ class DemoStudyService:
         check_photos(image, work_image)
         if (question,level,my_work,work_kind) != (QUESTION,'初中',STUDENT_WORK,'steps'):
             raise ValueError('离线演示只回放自带方程题及其原作答，修改后的任意输入不会得到模拟分析。')
-        return validate_analysis(deepcopy(ANALYSIS),student_work=my_work,work_kind=work_kind)
+        return validate_analysis(deepcopy(ANALYSIS),student_work=my_work,work_kind=work_kind,question=question)
 
     def reanalyze(self, entry, answer, *, work_kind):
         validate_entry(entry)
@@ -55,7 +55,7 @@ class DemoStudyService:
                 or answer!=expected or work_kind!='steps'):
             raise ValueError('离线演示只包含原错答到自带订正的一轮对照；其他作答需真实模型。')
         return validate_result(result,previous_work=previous['work'],previous_analysis=previous['analysis'],
-                               answer=answer,work_kind=work_kind)
+                               answer=answer,work_kind=work_kind,question=entry['question'])
 
 
 def load_draft():

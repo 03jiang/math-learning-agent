@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-import http_worker
+from legacy import http_worker
 
 http_worker.MAX_REQUEST_BYTES=12*1024*1024
 if __name__=='__main__':

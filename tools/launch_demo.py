@@ -18,7 +18,7 @@ def preflight(root):
         if not (root / name).is_file():
             raise ValueError(f'项目文件缺失：{name}。请保留完整项目目录。')
     # 显式使用示例配置，忽略本机 API 配置及继承的 MATH_MODEL_CONFIG。
-    from model_api import load_model_config
+    from legacy.model_api import load_model_config
     config = load_model_config(root / 'model_config.example.json')
     if config.mode != 'mock':
         raise ValueError('模拟入口只接受 mock 配置；请恢复 model_config.example.json 的 mode。')
@@ -83,7 +83,7 @@ def main(argv=None):
         ensure_port_available(args.port)
         print(f'页面：http://127.0.0.1:{args.port}/', flush=True)
         print('停止服务：在本终端按 Ctrl+C；下次双击可恢复已确认进度。', flush=True)
-        command = [sys.executable, '-B', '-m', 'streamlit', 'run', str(ROOT / 'app.py'),
+        command = [sys.executable, '-B', '-m', 'streamlit', 'run', str(ROOT / 'legacy/app.py'),
                    '--server.address', '127.0.0.1', '--server.port', str(args.port),
                    '--server.headless', str(args.no_browser).lower(),
                    '--browser.gatherUsageStats', 'false']

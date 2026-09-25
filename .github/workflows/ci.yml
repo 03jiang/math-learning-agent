@@ -25,3 +25,8 @@ jobs:
         run: python -m study.launch --demo --check
       - name: Test without model credentials
         run: python -B -m unittest discover -v
+      - name: Verify public allowlist and manifest
+        run: |
+          python tools/export_public.py --output "$RUNNER_TEMP/public-export"
+          diff PUBLIC_MANIFEST.json "$RUNNER_TEMP/public-export/PUBLIC_MANIFEST.json"
+          python -c 'import json,subprocess; allowed=set(json.load(open("tools/public_files.json"))["files"])|{"PUBLIC_MANIFEST.json"}; tracked=set(subprocess.check_output(["git","ls-files"],text=True).splitlines()); assert tracked==allowed, sorted(tracked^allowed)'

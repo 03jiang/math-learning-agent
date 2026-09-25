@@ -14,6 +14,7 @@ def invalidate():
     st.session_state.photo_confirmed=False
     st.session_state.photo_analysis=None
     st.session_state.photo_recognition=None
+    st.session_state.photo_observation=None
 
 
 def put_upload(role,raw):
@@ -82,7 +83,8 @@ def remove_photo(role):
 
 
 def render_inputs():
-    from study.ui import service, run_once
+    from study.ui import service, run_once, reply_origin
+    from study.transcription import observe
     st.subheader('1 · 放入题目与作答')
     source=st.radio('题目来源',['上传照片','使用摄像头','直接输入'],horizontal=True,key='photo_source')
     generation=st.session_state.get('photo_upload_generation','initial')
@@ -121,10 +123,16 @@ def render_inputs():
         if st.button('识别这道题',type='primary',disabled=not(image or question.strip())):
             data=[image['sha256'] if image else None,work_image['sha256'] if work_image else None,
                   question if image is None else '',st.session_state.get('photo_model','')]
-            key='ocr-v3-'+hashlib.sha256(json.dumps(data,ensure_ascii=False).encode()).hexdigest()
+            key='ocr-v4-'+hashlib.sha256(json.dumps(data,ensure_ascii=False).encode()).hexdigest()
+            def recognize_once():
+                raw=service().recognize(image,work_image,question_text=question if image is None else '')
+                return observe(raw,image,work_image,provided_question=question if image is None else '',
+                    mode='offline_demo' if demo_enabled() else 'real_api',origin=reply_origin())
             try:
                 with st.spinner('正在分别识别题目与学生作答…'):
-                    value=run_once(key,lambda:service().recognize(image,work_image,question_text=question if image is None else ''))
+                    observation=run_once(key,recognize_once)
+                value=observation['raw']
+                st.session_state.photo_observation=observation
                 st.session_state.photo_recognition=value
                 st.session_state.photo_question=value['text']
                 st.session_state.photo_work=value['student_work']
